@@ -1,4 +1,5 @@
 import { ingredientKey } from './normalize';
+import type { ProductFacts } from './barcode';
 import type { Recipe, RecipeIngredient } from './types';
 
 export type Diet = 'vegetarian' | 'vegan' | 'pescatarian' | 'glutenFree' | 'dairyFree';
@@ -124,4 +125,39 @@ export function isEmptyProfile(p: DietProfile) {
 /** Splits a typed list like "mushrooms, olives" into clean names. */
 export function parseDislikes(text: string): string[] {
   return [...new Set(text.split(/[,\n]/).map((s) => s.trim().toLowerCase()).filter(Boolean))];
+}
+
+export interface ProductWarning {
+  text: string;
+  /** Allergies are serious; "may contain" and diet notes are cautions. */
+  level: 'danger' | 'caution';
+}
+
+/**
+ * Checks a scanned product's label against the profile.
+ * Falls back to the product name when the label lists no allergens.
+ */
+export function productWarnings(name: string, facts: ProductFacts, profile: DietProfile): ProductWarning[] {
+  const out: ProductWarning[] = [];
+  const fromName = ingredientTags(name);
+  for (const a of profile.allergies) {
+    if (facts.allergens.includes(a) || fromName.has(a)) out.push({ text: `Contains ${ALLERGEN_LABEL[a].toLowerCase()}`, level: 'danger' });
+    else if (facts.traces.includes(a)) out.push({ text: `May contain ${ALLERGEN_LABEL[a].toLowerCase()}`, level: 'caution' });
+  }
+  const has = (a: Allergen) => facts.allergens.includes(a) || fromName.has(a);
+  for (const d of profile.diets) {
+    const bad =
+      d === 'vegan'
+        ? facts.vegan === false || DIET_BLOCKS.vegan.some((t) => fromName.has(t)) || has('dairy') || has('eggs')
+        : d === 'vegetarian'
+          ? facts.vegetarian === false || DIET_BLOCKS.vegetarian.some((t) => fromName.has(t))
+          : d === 'pescatarian'
+            ? fromName.has('meat')
+            : d === 'glutenFree'
+              ? !facts.glutenFree && has('gluten')
+              : has('dairy');
+    if (bad) out.push({ text: `Not ${DIET_LABEL[d].toLowerCase()}`, level: 'caution' });
+  }
+  // Allergies first.
+  return out.sort((x, y) => (x.level === y.level ? 0 : x.level === 'danger' ? -1 : 1));
 }
