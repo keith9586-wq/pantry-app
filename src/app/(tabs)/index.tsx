@@ -6,6 +6,7 @@ import { colors, space, urgencyColor } from '../../components/theme';
 import { daysLeft, expiryLabel, urgency } from '../../lib/expiry';
 import type { InventoryItem, StorageSpot } from '../../lib/types';
 import { moneyStats, useStore } from '../../store/useStore';
+import { enableReminders } from '../../notify/reminders';
 
 const SPOTS: { key: StorageSpot | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -78,6 +79,8 @@ export default function KitchenScreen() {
   }, [items, spot]);
 
   const stats = moneyStats(log);
+  const remindersOn = useStore((s) => s.remindersOn);
+  const [hideReminderCard, setHideReminderCard] = useState(false);
 
   return (
     <ScrollView contentContainerStyle={{ padding: space(4), paddingBottom: space(16) }}>
@@ -111,6 +114,15 @@ export default function KitchenScreen() {
         />
       ) : (
         <>
+          {!remindersOn && !hideReminderCard && (
+            <View style={styles.tip}>
+              <Text style={styles.tipText}>Get a heads-up the morning before food expires.</Text>
+              <View style={{ flexDirection: 'row', gap: space(2), marginTop: space(2) }}>
+                <Button title="Turn on reminders" onPress={() => enableReminders()} style={{ flex: 1 }} />
+                <Button kind="secondary" title="Not now" onPress={() => setHideReminderCard(true)} />
+              </View>
+            </View>
+          )}
           {useSoon.length > 0 && (
             <>
               <SectionTitle>Use soon</SectionTitle>
@@ -165,5 +177,7 @@ const styles = StyleSheet.create({
   more: { paddingHorizontal: space(4), paddingVertical: space(2) },
   moreText: { fontSize: 18, color: colors.primary, fontWeight: '700' },
   actions: { flexDirection: 'row', gap: space(3), marginTop: space(6) },
+  tip: { backgroundColor: colors.primarySoft, borderRadius: 14, padding: space(4), marginTop: space(4) },
+  tipText: { fontSize: 15, color: colors.text },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: space(3) },
 });

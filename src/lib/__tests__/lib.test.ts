@@ -151,3 +151,28 @@ test('groupByAisle orders by store layout', () => {
   ]);
   assert.deepEqual(groups.map((g) => g.category), ['produce', 'dairy']);
 });
+
+import { planReminders } from '../reminders';
+
+test('planReminders groups items into one morning reminder per day', () => {
+  const now = new Date(2026, 10, 7, 12, 0); // Nov 7, noon
+  const exp = (d: number) => new Date(2026, 10, d, 18).toISOString();
+  const r = planReminders(
+    [
+      item('Milk', { expiresAt: exp(10) }),
+      item('Spinach', { expiresAt: exp(10) }),
+      item('Bread', { expiresAt: exp(8) }), // day-before reminder (Nov 7 9am) has passed -> Nov 8 9am
+      item('Yogurt', { expiresAt: exp(7) }), // expires today, both slots passed -> skipped
+      item('Rice', { expiresAt: exp(30) }), // beyond 14-day horizon
+      item('Salt', { expiresAt: null }),
+    ],
+    now,
+  );
+  assert.equal(r.length, 2);
+  assert.equal(r[0].at.getDate(), 8);
+  assert.equal(r[0].at.getHours(), 9);
+  assert.equal(r[0].title, 'Use your bread soon');
+  assert.equal(r[1].at.getDate(), 9);
+  assert.equal(r[1].title, '2 items to use up soon');
+  assert.match(r[1].body, /Milk, Spinach expire soon/);
+});

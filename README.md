@@ -16,6 +16,8 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Household sharing.** Tap Household on the Kitchen tab to create a household or join one with an invite code. The kitchen, shopping list and history then sync across everyone's phones with live updates. People start with an anonymous account, so there's no sign-up form.
 - **Forwarded e-receipts.** Each household gets its own email address. Forwarded receipts are read on the server and wait in the Scan tab for a quick check before they're added.
 
+- **Use-by reminders.** One notification the morning before food expires, grouped per day. Tapping it opens recipes that use those items. You can turn it on from the Kitchen tab or in Settings.
+- **Accounts.** Everyone starts with an anonymous account. In Settings you can save it with your email (a 6-digit code) and sign in on a new phone to get your household back.
 - **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Plus ($4.99/month) unlocks unlimited scans, recipes, the self-filling list and the Savings tab. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
 
 Without a backend configured, the app runs fully on the phone and the sharing screen explains what to set up.
@@ -55,7 +57,7 @@ supabase functions deploy inbound-email
 cp .env.example .env   # then fill in EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY
 ```
 
-In the Supabase dashboard, turn on **Anonymous sign-ins** (Authentication → Providers) so household sharing works without a sign-up form.
+In the Supabase dashboard, turn on **Anonymous sign-ins** (Authentication → Providers) so household sharing works without a sign-up form. For email sign-in by code, edit the **Magic Link** and **Change Email Address** email templates (Authentication → Email Templates) to include `{{ .Token }}`, so the email contains the 6-digit code.
 
 For email forwarding, set `EXPO_PUBLIC_RECEIPT_EMAIL_DOMAIN` in `.env` to the domain your provider receives mail for, and point the provider (for example Postmark inbound) at
 `https://<project>.supabase.co/functions/v1/inbound-email?secret=<INBOUND_EMAIL_SECRET>`.
@@ -91,6 +93,6 @@ supabase/         backend functions and database schema
 
 ## Next steps
 
-1. Upgrade anonymous accounts to email sign-in so a household survives a lost phone.
-2. Push notifications for food about to expire.
-3. Meal planner and price tracking (v1.1).
+1. Meal planner (v1.1).
+2. Price tracking from receipts (v1.1).
+3. Diet and allergy profiles (v1.1).
