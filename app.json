@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "pantry-app",
+    "name": "Pantry",
     "slug": "pantry-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,6 +20,23 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Pantry uses the camera to scan grocery receipts and product barcodes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pantry reads receipt photos you choose to add groceries to your kitchen.",
+          "cameraPermission": "Pantry uses the camera to scan grocery receipts and product barcodes."
+        }
+      ]
+    ],
+    "scheme": "pantry"
   }
 }
