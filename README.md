@@ -13,6 +13,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Auto shopping list.** Things you've bought at least twice are added when they run out or run low, grouped by store aisle. Checked items can be put straight into the kitchen.
 - **Money saved and wasted.** The Savings tab shows what you ate vs. threw out this month, your waste rate, and the items you throw out most.
 
+- **Welcome screens.** New installs get four short screens: what the app does, just me or a household, optional reminders and diet, then scan a receipt, try sample groceries or start empty. People upgrading from an earlier build skip them.
 - **Household sharing.** Tap Household on the Kitchen tab to create a household or join one with an invite code. The kitchen, shopping list and history then sync across everyone's phones with live updates. People start with an anonymous account, so there's no sign-up form.
 - **Forwarded e-receipts.** Each household gets its own email address. Forwarded receipts are read on the server and wait in the Scan tab for a quick check before they're added.
 

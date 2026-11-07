@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RECIPES } from '../data/recipes';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -51,6 +51,9 @@ interface State extends Snapshot {
   /** This phone's diet, allergies and dislikes. Not shared with the household. */
   dietProfile: DietProfile;
   setDietProfile: (p: DietProfile) => void;
+  /** Set once the welcome screens are done (or skipped). */
+  onboarded: boolean;
+  setOnboarded: () => void;
   /** Recipes the user typed in. Ids start with "my-". */
   customRecipes: Recipe[];
   saveRecipe: (r: Recipe) => void;
@@ -130,6 +133,8 @@ export const useStore = create<State>()(
       priceHistory: {},
       dietProfile: EMPTY_PROFILE,
       setDietProfile: (p) => set({ dietProfile: p }),
+      onboarded: false,
+      setOnboarded: () => set({ onboarded: true }),
       customRecipes: [],
       saveRecipe: (r) =>
         set((s) => ({ customRecipes: s.customRecipes.some((x) => x.id === r.id) ? s.customRecipes.map((x) => (x.id === r.id ? r : x)) : [r, ...s.customRecipes] })),
@@ -293,6 +298,12 @@ export const useStore = create<State>()(
     {
       name: 'pantry-store-v1',
       storage: createJSONStorage(() => AsyncStorage),
+      // People who used the app before the welcome screens existed shouldn't see them.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<State>;
+        const used = (p.items?.length ?? 0) > 0 || (p.log?.length ?? 0) > 0 || !!p.householdId;
+        return { ...current, ...p, onboarded: p.onboarded ?? used };
+      },
       partialize: (s) => ({
         items: s.items,
         shopping: s.shopping,
@@ -304,6 +315,7 @@ export const useStore = create<State>()(
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,
         dietProfile: s.dietProfile,
+        onboarded: s.onboarded,
         customRecipes: s.customRecipes,
       }),
     },
@@ -316,4 +328,16 @@ export { moneyStats } from '../lib/money';
 export function useRecipes(): Recipe[] {
   const custom = useStore((s) => s.customRecipes);
   return useMemo(() => [...custom, ...RECIPES], [custom]);
+}
+
+/** False until the saved state has loaded from the phone, so screens don't flash the wrong thing. */
+export function useHydrated(): boolean {
+  const [done, setDone] = useState(() => useStore.persist.hasHydrated());
+  useEffect(() => {
+    if (done) return;
+    const unsub = useStore.persist.onFinishHydration(() => setDone(true));
+    if (useStore.persist.hasHydrated()) setDone(true);
+    return unsub;
+  }, [done]);
+  return done;
 }

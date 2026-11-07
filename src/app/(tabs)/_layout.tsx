@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router/tabs';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
+import { useHydrated, useStore } from '../../store/useStore';
 import { Pressable, Text, type ColorValue } from 'react-native';
 import { colors } from '../../components/theme';
 
@@ -7,6 +8,11 @@ import { colors } from '../../components/theme';
 const glyph = (g: string) => ({ color }: { color: ColorValue }) => <Text style={{ color, fontSize: 18 }}>{g}</Text>;
 
 export default function TabsLayout() {
+  const hydrated = useHydrated();
+  const onboarded = useStore((s) => s.onboarded);
+  // Wait for saved data so returning users never see the welcome screens.
+  if (!hydrated) return null;
+  if (!onboarded) return <Redirect href="/welcome" />;
   return (
     <Tabs
       screenOptions={{
