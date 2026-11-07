@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useMemo } from 'react';
+import { RECIPES } from '../data/recipes';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { predictExpiry } from '../lib/expiry';
@@ -49,6 +51,10 @@ interface State extends Snapshot {
   /** This phone's diet, allergies and dislikes. Not shared with the household. */
   dietProfile: DietProfile;
   setDietProfile: (p: DietProfile) => void;
+  /** Recipes the user typed in. Ids start with "my-". */
+  customRecipes: Recipe[];
+  saveRecipe: (r: Recipe) => void;
+  deleteRecipe: (id: string) => void;
   /** Dates of receipt photo scans, for the free plan's monthly limit. */
   scanLog: string[];
   remindersOn: boolean;
@@ -124,6 +130,14 @@ export const useStore = create<State>()(
       priceHistory: {},
       dietProfile: EMPTY_PROFILE,
       setDietProfile: (p) => set({ dietProfile: p }),
+      customRecipes: [],
+      saveRecipe: (r) =>
+        set((s) => ({ customRecipes: s.customRecipes.some((x) => x.id === r.id) ? s.customRecipes.map((x) => (x.id === r.id ? r : x)) : [r, ...s.customRecipes] })),
+      deleteRecipe: (id) =>
+        set((s) => ({
+          customRecipes: s.customRecipes.filter((r) => r.id !== id),
+          mealPlan: Object.fromEntries(Object.entries(s.mealPlan).map(([d, ids]) => [d, ids.filter((x) => x !== id)])),
+        })),
       log: [],
       lastAction: null,
       householdId: null,
@@ -290,9 +304,16 @@ export const useStore = create<State>()(
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,
         dietProfile: s.dietProfile,
+        customRecipes: s.customRecipes,
       }),
     },
   ),
 );
 
 export { moneyStats } from '../lib/money';
+
+/** The user's own recipes first, then the built-in ones. */
+export function useRecipes(): Recipe[] {
+  const custom = useStore((s) => s.customRecipes);
+  return useMemo(() => [...custom, ...RECIPES], [custom]);
+}
