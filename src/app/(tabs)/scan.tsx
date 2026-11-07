@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Input, SectionTitle } from '../../components/ui';
 import { colors, space } from '../../components/theme';
@@ -8,10 +8,13 @@ import { CATEGORY_LABEL } from '../../lib/normalize';
 import { parseReceiptImage, parseReceiptText } from '../../lib/receipt';
 import type { ParsedLine } from '../../lib/types';
 import { useStore } from '../../store/useStore';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../sync/client';
+import { listPending, markHandled, type PendingReceipt } from '../../sync/pending';
 
 // Set these in .env (see README). Without them the app falls back to pasted text.
-const API_URL = process.env.EXPO_PUBLIC_RECEIPT_API_URL;
-const API_KEY = process.env.EXPO_PUBLIC_RECEIPT_API_KEY;
+const API_URL =
+  process.env.EXPO_PUBLIC_RECEIPT_API_URL || (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/parse-receipt` : undefined);
+const API_KEY = process.env.EXPO_PUBLIC_RECEIPT_API_KEY || SUPABASE_ANON_KEY;
 
 type Row = ParsedLine & { keep: boolean };
 
@@ -30,6 +33,26 @@ export default function ScanScreen() {
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState('');
   const [showPaste, setShowPaste] = useState(!API_URL);
+  const householdId = useStore((s) => s.householdId);
+  const [pending, setPending] = useState<PendingReceipt[]>([]);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!householdId) return setPending([]);
+      listPending(householdId).then(setPending).catch(() => {});
+    }, [householdId]),
+  );
+
+  function openPending(p: PendingReceipt) {
+    setPendingId(p.id);
+    setRows(p.items.map((l) => ({ ...l, keep: true })));
+  }
+
+  async function dismissPending(id: string) {
+    setPending((ps) => ps.filter((p) => p.id !== id));
+    await markHandled(id).catch(() => {});
+  }
 
   async function fromImage(source: 'camera' | 'library') {
     if (!API_URL) {
@@ -73,6 +96,10 @@ export default function ScanScreen() {
   function confirm() {
     const kept = rows.filter((r) => r.keep);
     addParsed(kept);
+    if (pendingId) {
+      dismissPending(pendingId);
+      setPendingId(null);
+    }
     setRows([]);
     setText('');
     Alert.alert('Added to your kitchen', `${kept.length} items now have predicted use-by dates.`);
@@ -85,6 +112,27 @@ export default function ScanScreen() {
     <ScrollView contentContainerStyle={{ padding: space(4), paddingBottom: space(16) }} keyboardShouldPersistTaps="handled">
       {rows.length === 0 ? (
         <>
+          {pending.length > 0 && (
+            <>
+              <SectionTitle>Emailed receipts to check</SectionTitle>
+              {pending.map((p) => (
+                <Pressable key={p.id} onPress={() => openPending(p)} style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {p.subject || 'Forwarded receipt'}
+                    </Text>
+                    <Text style={styles.meta}>
+                      {p.items.length} items · {new Date(p.receivedAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => dismissPending(p.id)} hitSlop={10}>
+                    <Text style={styles.meta}>Dismiss</Text>
+                  </Pressable>
+                </Pressable>
+              ))}
+              <View style={{ height: space(4) }} />
+            </>
+          )}
           <Card>
             <Text style={styles.lead}>Snap your receipt and the app fills your kitchen for you.</Text>
             <Text style={styles.body}>
@@ -142,7 +190,15 @@ export default function ScanScreen() {
             </Pressable>
           ))}
           <View style={{ flexDirection: 'row', gap: space(2), marginTop: space(4) }}>
-            <Button kind="secondary" title="Start over" onPress={() => setRows([])} style={{ flex: 1 }} />
+            <Button
+              kind="secondary"
+              title={pendingId ? 'Back' : 'Start over'}
+              onPress={() => {
+                setRows([]);
+                setPendingId(null);
+              }}
+              style={{ flex: 1 }}
+            />
             <Button title={`Add ${keptCount} items`} onPress={confirm} disabled={keptCount === 0} style={{ flex: 2 }} />
           </View>
         </>

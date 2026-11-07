@@ -16,7 +16,9 @@ import type {
   WasteEntry,
 } from '../lib/types';
 
-export const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+import { uuid } from '../lib/id';
+
+export const newId = uuid;
 
 type PurchaseCounts = Record<string, { name: string; count: number; category: Category }>;
 
@@ -38,6 +40,12 @@ interface Snapshot {
 }
 
 interface State extends Snapshot {
+  /** Set once the user creates or joins a household; turns on cloud sync. */
+  householdId: string | null;
+  setHousehold: (id: string | null) => void;
+  /** Replaces local data with the household's copy. Not undoable and not echoed back. */
+  applyRemote: (data: Partial<Pick<Snapshot, 'items' | 'shopping' | 'log'>>) => void;
+
   /** The last change that can be undone, kept in memory only. */
   lastAction: { label: string; before: Snapshot } | null;
   undo: () => void;
@@ -98,6 +106,10 @@ export const useStore = create<State>()(
       purchaseCounts: {},
       log: [],
       lastAction: null,
+      householdId: null,
+
+      setHousehold: (id) => set({ householdId: id }),
+      applyRemote: (data) => set({ ...data, lastAction: null }),
 
       undo: () => {
         const a = get().lastAction;
@@ -153,7 +165,7 @@ export const useStore = create<State>()(
               : i,
           ),
           log: [
-            { name: it.name, at: new Date().toISOString(), outcome: 'used' as const, price: unitPrice !== undefined ? Math.round(unitPrice * amount * 100) / 100 : undefined },
+            { id: newId(), name: it.name, at: new Date().toISOString(), outcome: 'used' as const, price: unitPrice !== undefined ? Math.round(unitPrice * amount * 100) / 100 : undefined },
             ...s.log,
           ].slice(0, 500),
         }));
@@ -170,6 +182,7 @@ export const useStore = create<State>()(
           // Only the unused share of the price counts as waste.
           const share = it.fill === 'full' ? 1 : it.fill === 'half' ? 0.5 : 0.2;
           const entry: WasteEntry = {
+            id: newId(),
             name: it.name,
             price: it.price !== undefined ? Math.round(it.price * (outcome === 'tossed' ? share : 1) * 100) / 100 : undefined,
             at: new Date().toISOString(),
@@ -190,7 +203,7 @@ export const useStore = create<State>()(
         const priceOf = (name: string) => before.find((i) => i.name === name)?.price;
         set((s) => ({
           items: inventory,
-          log: [...usedUp.map((name) => ({ name, at, outcome: 'used' as const, price: priceOf(name) })), ...s.log].slice(0, 500),
+          log: [...usedUp.map((name) => ({ id: newId(), name, at, outcome: 'used' as const, price: priceOf(name) })), ...s.log].slice(0, 500),
         }));
         return usedUp;
       },
@@ -232,7 +245,13 @@ export const useStore = create<State>()(
     {
       name: 'pantry-store-v1',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ items: s.items, shopping: s.shopping, purchaseCounts: s.purchaseCounts, log: s.log }),
+      partialize: (s) => ({
+        items: s.items,
+        shopping: s.shopping,
+        purchaseCounts: s.purchaseCounts,
+        log: s.log,
+        householdId: s.householdId,
+      }),
     },
   ),
 );
