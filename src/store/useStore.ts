@@ -66,6 +66,9 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** Opt-in anonymous price sharing for the local price map. */
+  priceSharing: { on: boolean; zip: string };
+  setPriceSharing: (p: { on: boolean; zip: string }) => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
   setHousehold: (id: string | null) => void;
@@ -157,6 +160,8 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      priceSharing: { on: false, zip: '' },
+      setPriceSharing: (priceSharing) => set({ priceSharing }),
       remindersOn: false,
       mealPlan: {},
       addToPlan: (day, recipeId) =>
@@ -321,6 +326,7 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        priceSharing: s.priceSharing,
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,

@@ -27,6 +27,8 @@ Pantry ("the app") is made by Keith. This policy explains what the app collects,
 
 **Barcodes.** When you scan a barcode, the app looks up the number on Open Food Facts, a public product database. Only the barcode number is sent.
 
+**Prices near you (off unless you turn it on).** If you turn on anonymous price sharing, each receipt you confirm sends the store chain name, the first three digits of the ZIP code you enter, and the price per unit of each item. Your name, household and the time of day are not sent. Nobody can read individual reports; the app only shows a store's price once at least three different people nearby have reported it. Turning sharing off stops new reports.
+
 **Purchases.** Subscriptions go through Apple or Google and are managed by RevenueCat. We receive whether your subscription is active and the anonymous account id it belongs to. We never see your card details.
 
 **Notifications.** Use-by reminders are scheduled on your phone. Nothing about them is sent to us.

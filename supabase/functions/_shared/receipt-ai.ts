@@ -9,8 +9,9 @@ const CATEGORIES = [
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['items'],
+  required: ['items', 'store'],
   properties: {
+    store: { type: ['string', 'null'], description: 'Store chain name as printed at the top, e.g. "Aldi", without store number or address; null if not shown' },
     items: {
       type: 'array',
       items: {
@@ -42,7 +43,7 @@ export interface ReceiptInput {
   text?: string;
 }
 
-export async function extractReceiptItems(input: ReceiptInput): Promise<{ items: unknown[] }> {
+export async function extractReceiptItems(input: ReceiptInput): Promise<{ items: unknown[]; store?: string | null }> {
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];
   if (input.image) {
     content.push({ type: 'image', source: { type: 'base64', media_type: input.image.mediaType, data: input.image.data } });

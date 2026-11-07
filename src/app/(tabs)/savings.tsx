@@ -1,4 +1,9 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { cheaperNearby, cheaperText, zip3, type AreaPrice } from '../../lib/priceMap';
+import { supabase } from '../../sync/client';
+import { fetchAreaPrices } from '../../sync/priceMap';
 import { Card, Empty, SectionTitle } from '../../components/ui';
 import { colors, space } from '../../components/theme';
 import { moneyStats, useStore } from '../../store/useStore';
@@ -16,6 +21,19 @@ export default function SavingsScreen() {
   const month = new Date().toLocaleString(undefined, { month: 'long' });
   const plan = usePlan();
   const priceHistory = useStore((s) => s.priceHistory);
+  const sharing = useStore((s) => s.priceSharing);
+  const area = zip3(sharing.zip);
+  const [nearby, setNearby] = useState<AreaPrice[] | null>(null);
+  const paid = can(plan, 'savings');
+  useEffect(() => {
+    if (!paid || !sharing.on || !area) return setNearby(null);
+    let live = true;
+    fetchAreaPrices(area, Object.keys(priceHistory)).then((rows) => live && setNearby(rows));
+    return () => {
+      live = false;
+    };
+  }, [paid, sharing.on, area, priceHistory]);
+  const cheaper = nearby ? cheaperNearby(priceHistory, nearby).slice(0, 5) : [];
 
   if (!can(plan, 'savings')) {
     const teaser = stats.tossedCount > 0 ? `You've thrown out ${stats.tossedCount} items this month. ` : '';
@@ -85,6 +103,36 @@ export default function SavingsScreen() {
           <Text style={styles.tip}>
             Tip: buy {stats.mostTossed[0].name.toLowerCase()} in smaller amounts, or freeze it the day you buy it.
           </Text>
+        </>
+      )}
+
+      {supabase && (
+        <>
+          <SectionTitle>Cheaper near you</SectionTitle>
+          {!sharing.on || !area ? (
+            <Pressable onPress={() => router.push('/settings')}>
+              <Card>
+                <Text style={styles.name}>See where your groceries cost less nearby</Text>
+                <Text style={styles.note}>
+                  Turn on anonymous price sharing in Settings. You'll see prices other shoppers in your area paid, once 3 or more have shared.
+                </Text>
+              </Card>
+            </Pressable>
+          ) : cheaper.length > 0 ? (
+            cheaper.map((c) => (
+              <View key={c.key} style={styles.row}>
+                <Text style={[styles.name, { flex: 1 }]}>{cheaperText(c)}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.note}>
+              {nearby === null
+                ? 'Checking prices near you…'
+                : nearby.length === 0
+                  ? 'Not enough shoppers near you have shared prices yet. Every receipt you scan helps.'
+                  : "You're already paying about the best price near you for what you buy."}
+            </Text>
+          )}
         </>
       )}
 

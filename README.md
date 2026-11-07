@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Prices near you (opt-in, Plus to view).** People who turn on anonymous sharing in Settings send per-unit prices with the store chain and ZIP3 when they confirm a receipt. Savings shows "Eggs: $0.25 at Aldi near you, vs $0.40 you paid" from area medians. A price only appears once 3 different people have reported it (migration `0008_area_prices.sql`: raw reports can't be read, only the aggregated view).
 - **Receipt scanning.** Take a photo of a receipt (or paste e-receipt text). Store shorthand like `GV WHL MLK 1G` becomes "Whole Milk", and each item lands in your kitchen.
 - **Predicted use-by dates.** Every item gets an estimated date from what it is and where it's kept. Moving milk to the freezer re-estimates it.
 - **Barcode scanning.** Scan a package to add it, looked up in [Open Food Facts](https://world.openfoodfacts.org).
