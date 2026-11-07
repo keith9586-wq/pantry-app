@@ -66,6 +66,12 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** Food swap details, remembered between offers. Contact is only ever shown to the person you accept. */
+  swap: { name: string; zip: string; contact: string };
+  setSwap: (s: { name: string; zip: string; contact: string }) => void;
+  /** Which kitchen item each of your nearby offers is, so handing it over can clear it. */
+  offerItems: Record<string, string>;
+  linkOffer: (offerId: string, itemId: string) => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
   setHousehold: (id: string | null) => void;
@@ -157,6 +163,10 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      swap: { name: '', zip: '', contact: '' },
+      setSwap: (swap) => set({ swap }),
+      offerItems: {},
+      linkOffer: (offerId, itemId) => set((s) => ({ offerItems: { ...s.offerItems, [offerId]: itemId } })),
       remindersOn: false,
       mealPlan: {},
       addToPlan: (day, recipeId) =>
@@ -321,6 +331,8 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        swap: s.swap,
+        offerItems: s.offerItems,
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,

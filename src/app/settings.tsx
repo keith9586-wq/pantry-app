@@ -88,6 +88,13 @@ export default function SettingsScreen() {
         onPress={() => router.push('/diet')}
       />
 
+      {supabase && (
+        <>
+          <SectionTitle>Neighbors</SectionTitle>
+          <Row label="Food swap nearby" value="Open" onPress={() => router.push('/swap')} />
+        </>
+      )}
+
       <SectionTitle>Reminders</SectionTitle>
       <View style={styles.row}>
         <Text style={[styles.rowLabel, { flex: 1 }]}>Morning heads-up before food expires</Text>

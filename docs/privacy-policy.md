@@ -27,6 +27,8 @@ Pantry ("the app") is made by Keith. This policy explains what the app collects,
 
 **Barcodes.** When you scan a barcode, the app looks up the number on Open Food Facts, a public product database. Only the barcode number is sent.
 
+**Food swap (only if you use it).** If you post food for neighbors, people signed in to Pantry in the same area (first three ZIP digits) see your first name, the food, the date it's good until, the pickup area you type and your note. The contact details you enter are shown only to the person you choose to give it to. If you ask for someone's food, they see your first name and message. You can take a post down at any time. Sending food to a friend uses your phone's own share sheet and doesn't go through Pantry.
+
 **Purchases.** Subscriptions go through Apple or Google and are managed by RevenueCat. We receive whether your subscription is active and the anonymous account id it belongs to. We never see your card details.
 
 **Notifications.** Use-by reminders are scheduled on your phone. Nothing about them is sent to us.

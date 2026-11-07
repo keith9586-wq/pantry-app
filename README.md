@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Give it away.** Any item can go to a friend through the phone's share sheet, or onto the neighbor food swap (Settings → Food swap nearby): neighbors in the same ZIP3 see a first name, the food and a rough pickup area, ask for it, and only the person the giver picks sees their contact. Raw meat, fish and leftovers are friends-only; two reports hide a post (migration `0009_surplus.sql`).
 - **Receipt scanning.** Take a photo of a receipt (or paste e-receipt text). Store shorthand like `GV WHL MLK 1G` becomes "Whole Milk", and each item lands in your kitchen.
 - **Predicted use-by dates.** Every item gets an estimated date from what it is and where it's kept. Moving milk to the freezer re-estimates it.
 - **Barcode scanning.** Scan a package to add it, looked up in [Open Food Facts](https://world.openfoodfacts.org).

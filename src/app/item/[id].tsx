@@ -108,6 +108,11 @@ export default function ItemScreen() {
           }}
         />
         <Button
+          kind="secondary"
+          title="Give it away"
+          onPress={() => router.push({ pathname: '/give', params: { id: item.id } })}
+        />
+        <Button
           kind="danger"
           title="Threw it out"
           onPress={() =>
