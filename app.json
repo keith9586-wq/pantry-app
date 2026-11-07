@@ -35,7 +35,8 @@
           "photosPermission": "Pantry reads receipt photos you choose to add groceries to your kitchen.",
           "cameraPermission": "Pantry uses the camera to scan grocery receipts and product barcodes."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "scheme": "pantry"
   }

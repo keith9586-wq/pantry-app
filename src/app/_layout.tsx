@@ -3,9 +3,11 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '../components/theme';
 import { UndoBar } from '../components/UndoBar';
 import { useHouseholdSync } from '../sync/useHouseholdSync';
+import { useExpiryReminders } from '../notify/reminders';
 
 export default function RootLayout() {
   useHouseholdSync();
+  useExpiryReminders();
   return (
     <>
       <StatusBar style="dark" />
@@ -22,6 +24,7 @@ export default function RootLayout() {
         <Stack.Screen name="item/[id]" options={{ title: 'Item' }} />
         <Stack.Screen name="barcode" options={{ presentation: 'modal', title: 'Scan a barcode' }} />
         <Stack.Screen name="household" options={{ title: 'Household' }} />
+        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="paywall" options={{ presentation: 'modal', title: 'Plans' }} />
       </Stack>
       <UndoBar />

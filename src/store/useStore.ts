@@ -42,6 +42,8 @@ interface Snapshot {
 interface State extends Snapshot {
   /** Dates of receipt photo scans, for the free plan's monthly limit. */
   scanLog: string[];
+  remindersOn: boolean;
+  setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
@@ -111,6 +113,8 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      remindersOn: false,
+      setRemindersOn: (on) => set({ remindersOn: on }),
       recordScan: () => set((s) => ({ scanLog: [new Date().toISOString(), ...s.scanLog].slice(0, 100) })),
 
       setHousehold: (id) => set({ householdId: id }),
@@ -257,6 +261,7 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        remindersOn: s.remindersOn,
       }),
     },
   ),

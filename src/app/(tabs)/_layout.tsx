@@ -23,8 +23,8 @@ export default function TabsLayout() {
           title: 'Kitchen',
           tabBarIcon: glyph('▤'),
           headerRight: () => (
-            <Pressable onPress={() => router.push('/household')} hitSlop={10} style={{ marginRight: 16 }}>
-              <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Household</Text>
+            <Pressable onPress={() => router.push('/settings')} hitSlop={10} style={{ marginRight: 16 }}>
+              <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Settings</Text>
             </Pressable>
           ),
         }}
