@@ -88,6 +88,9 @@ export default function SettingsScreen() {
         onPress={() => router.push('/diet')}
       />
 
+      <SectionTitle>Trips</SectionTitle>
+      <Row label="Going away" value="Plan" onPress={() => router.push('/away')} />
+
       <SectionTitle>Reminders</SectionTitle>
       <View style={styles.row}>
         <Text style={[styles.rowLabel, { flex: 1 }]}>Morning heads-up before food expires</Text>

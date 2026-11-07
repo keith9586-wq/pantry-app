@@ -32,9 +32,13 @@ export async function enableReminders(): Promise<boolean> {
 
 async function reschedule() {
   await Notifications.cancelAllScheduledNotificationsAsync();
-  const { items, remindersOn } = useStore.getState();
+  const { items, remindersOn, away } = useStore.getState();
   if (!remindersOn) return;
+  // Nobody can cook while away; the trip plan handles that food before leaving.
+  const awayFrom = away ? new Date(away.from).getTime() : Infinity;
+  const awayUntil = away ? new Date(away.until).getTime() : -Infinity;
   for (const r of planReminders(items, new Date())) {
+    if (r.at.getTime() >= awayFrom && r.at.getTime() < awayUntil) continue;
     await Notifications.scheduleNotificationAsync({
       content: { title: r.title, body: r.body, data: { screen: '/recipes' } },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: r.at, channelId: CHANNEL },
@@ -58,7 +62,7 @@ export function useExpiryReminders() {
     };
     run();
     const unsub = useStore.subscribe((s, prev) => {
-      if (s.items !== prev.items) run();
+      if (s.items !== prev.items || s.away !== prev.away) run();
     });
     return () => {
       unsub();

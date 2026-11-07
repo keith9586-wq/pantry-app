@@ -19,6 +19,7 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { PERISHABLE, restockPaused, type AwayTrip } from '../lib/away';
 import { prunePlan, type MealPlan } from '../lib/planner';
 import { recordPrices, type PriceHistory } from '../lib/prices';
 import { combineProfiles, EMPTY_PROFILE, isEmptyProfile, type DietProfile } from '../lib/diet';
@@ -66,6 +67,9 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** A trip away: fresh food isn't restocked and reminders pause. */
+  away: AwayTrip | null;
+  setAway: (trip: AwayTrip | null) => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
   setHousehold: (id: string | null) => void;
@@ -157,6 +161,8 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      away: null,
+      setAway: (away) => set({ away }),
       remindersOn: false,
       mealPlan: {},
       addToPlan: (day, recipeId) =>
@@ -286,8 +292,10 @@ export const useStore = create<State>()(
       },
 
       refreshSuggestions: () => {
-        const { items, purchaseCounts, shopping } = get();
-        const sugg = autoSuggestions(items, purchaseCounts, shopping);
+        const { items, purchaseCounts, shopping, away } = get();
+        // No fresh food on the list right before or during a trip.
+        const paused = restockPaused(away);
+        const sugg = autoSuggestions(items, purchaseCounts, shopping).filter((g) => !paused || !PERISHABLE.includes(g.category));
         set({
           shopping: [
             ...shopping,
@@ -321,6 +329,7 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        away: s.away,
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,

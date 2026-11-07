@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Away mode.** Settings → Going away: pick when you leave and for how long. The app lists what would spoil (freeze it in one tap, or eat it first, with dinners added to the plan on Plus), keeps fresh food off the self-filling list from the day before you leave, and pauses use-by reminders until you're back.
 - **Receipt scanning.** Take a photo of a receipt (or paste e-receipt text). Store shorthand like `GV WHL MLK 1G` becomes "Whole Milk", and each item lands in your kitchen.
 - **Predicted use-by dates.** Every item gets an estimated date from what it is and where it's kept. Moving milk to the freezer re-estimates it.
 - **Barcode scanning.** Scan a package to add it, looked up in [Open Food Facts](https://world.openfoodfacts.org).
