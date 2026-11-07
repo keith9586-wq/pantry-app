@@ -12,7 +12,7 @@ export interface RecipeMatch {
 }
 
 /** Staples most kitchens have; never counted as missing. */
-const ASSUMED = new Set(['salt', 'pepper', 'black pepper', 'water', 'oil', 'olive oil', 'vegetable oil']);
+export const ASSUMED = new Set(['salt', 'pepper', 'black pepper', 'water', 'oil', 'olive oil', 'vegetable oil']);
 
 export function findItem(inventory: InventoryItem[], ing: RecipeIngredient): InventoryItem | undefined {
   const key = ingredientKey(ing.name);

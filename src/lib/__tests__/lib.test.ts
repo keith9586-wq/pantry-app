@@ -176,3 +176,20 @@ test('planReminders groups items into one morning reminder per day', () => {
   assert.equal(r[1].title, '2 items to use up soon');
   assert.match(r[1].body, /Milk, Spinach expire soon/);
 });
+
+import { dayKey, missingForPlan, prunePlan, upcomingDays } from '../planner';
+
+test('meal planner lists what the week still needs', () => {
+  const now = new Date(2026, 10, 7, 12);
+  const days = upcomingDays(now, 3);
+  assert.deepEqual(days.map((d) => d.key), ['2026-11-07', '2026-11-08', '2026-11-09']);
+  assert.equal(days[0].label, 'Today');
+  assert.equal(dayKey(new Date(2026, 0, 5)), '2026-01-05');
+
+  const plan = { '2026-11-06': ['o'], '2026-11-07': ['o'], '2026-11-08': ['s', 'o'], '2026-11-09': [] };
+  assert.deepEqual(Object.keys(prunePlan(plan, now)), ['2026-11-07', '2026-11-08']);
+
+  const need = missingForPlan([item('Baby Spinach')], [omelette, steak], plan, now);
+  // eggs needed by both recipes, steak by one; spinach is on hand; salt is assumed.
+  assert.deepEqual(need.map((n) => [n.key, n.forRecipes.length]), [['egg', 2], ['steak', 1]]);
+});

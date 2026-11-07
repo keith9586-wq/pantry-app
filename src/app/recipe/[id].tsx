@@ -1,7 +1,10 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, Empty, SectionTitle } from '../../components/ui';
+import { Button, Chip, Empty, SectionTitle } from '../../components/ui';
+import { usePlan } from '../../billing/billing';
+import { can } from '../../lib/plans';
+import { upcomingDays } from '../../lib/planner';
 import { colors, space } from '../../components/theme';
 import { RECIPES } from '../../data/recipes';
 import { findItem } from '../../lib/recipes';
@@ -13,6 +16,9 @@ export default function RecipeScreen() {
   const items = useStore((s) => s.items);
   const cook = useStore((s) => s.cook);
   const addShopping = useStore((s) => s.addShopping);
+  const addToPlan = useStore((s) => s.addToPlan);
+  const canPlan = can(usePlan(), 'mealPlanner');
+  const [picking, setPicking] = useState(false);
 
   const rows = useMemo(
     () => (recipe ? recipe.ingredients.map((ing) => ({ ing, item: findItem(items, ing) })) : []),
@@ -50,6 +56,30 @@ export default function RecipeScreen() {
       ))}
 
       <View style={{ gap: space(2), marginTop: space(6) }}>
+        {picking ? (
+          <View>
+            <Text style={styles.meta}>Which day?</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: space(2), marginTop: space(2) }}>
+              {upcomingDays(new Date(), 7).map((d) => (
+                <Chip
+                  key={d.key}
+                  label={d.label}
+                  onPress={() => {
+                    addToPlan(d.key, recipe.id);
+                    setPicking(false);
+                    Alert.alert('Added to your plan', `${recipe.title} on ${d.label.toLowerCase()}.`);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        ) : (
+          <Button
+            kind="secondary"
+            title={canPlan ? 'Add to plan' : 'Add to plan (Plus)'}
+            onPress={() => (canPlan ? setPicking(true) : router.push('/paywall'))}
+          />
+        )}
         {missing.length > 0 && (
           <Button
             kind="secondary"

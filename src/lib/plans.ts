@@ -4,14 +4,15 @@ export type Feature =
   | 'unlimitedScans'
   | 'recipes'
   | 'autoList'
+  | 'mealPlanner'
   | 'savings'
   | 'createHousehold'
   | 'emailReceipts';
 
 const FEATURES: Record<Plan, Feature[]> = {
   free: [],
-  plus: ['unlimitedScans', 'recipes', 'autoList', 'savings'],
-  family: ['unlimitedScans', 'recipes', 'autoList', 'savings', 'createHousehold', 'emailReceipts'],
+  plus: ['unlimitedScans', 'recipes', 'autoList', 'mealPlanner', 'savings'],
+  family: ['unlimitedScans', 'recipes', 'autoList', 'mealPlanner', 'savings', 'createHousehold', 'emailReceipts'],
 };
 
 export const FREE_SCANS_PER_MONTH = 5;
@@ -51,7 +52,7 @@ export const PLAN_COPY: Record<Exclude<Plan, 'free'>, { title: string; fallbackP
   plus: {
     title: 'Plus',
     fallbackPrice: '$4.99/month',
-    perks: ['Unlimited receipt scans', 'Recipes from what you have', 'Self-filling shopping list', 'Money saved and wasted'],
+    perks: ['Unlimited receipt scans', 'Recipes from what you have', 'Weekly meal planner', 'Self-filling shopping list', 'Money saved and wasted'],
   },
   family: {
     title: 'Family',
