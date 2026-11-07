@@ -45,7 +45,7 @@ export default function DietScreen() {
         autoCapitalize="none"
       />
       <Text style={styles.note}>
-        Allergy matching uses ingredient names, so always check labels on packaged food. These settings stay on this phone.
+        Allergy matching uses ingredient names, so always check labels on packaged food. If you share a household, the others can see these so recipes can fit everyone.
       </Text>
     </ScrollView>
   );

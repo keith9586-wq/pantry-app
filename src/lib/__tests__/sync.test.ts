@@ -52,3 +52,43 @@ test('unionById keeps preferred copies', () => {
   const out = unionById([{ ...item, name: 'Server milk' }], [item, { ...item, id: 'z' }]);
   assert.deepEqual(out.map((x) => `${x.id}:${x.name}`), ['a:Server milk', 'z:Milk']);
 });
+
+import { historyToRecords, mergeHistories, recordsToHistory, rowToDiet, rowToPrice, rowToRecipe } from '../../sync/rows';
+import { combineProfiles } from '../diet';
+
+test('shared recipes, prices and diets survive the trip and reject junk', () => {
+  const recipe = { id: 'my-1', title: 'Mac', minutes: 20, servings: 2, ingredients: [{ name: 'pasta', quantity: 8, unit: 'oz' }], steps: ['Cook'] };
+  assert.deepEqual(rowToRecipe({ id: 'my-1', data: recipe }), recipe);
+  assert.equal(rowToRecipe({ id: 'x', data: { title: 'Nothing', ingredients: [{ name: 1 }] } }), null);
+  assert.equal(rowToRecipe({ id: 'x', data: null }), null);
+
+  const h = { milk: { name: 'Milk', points: [{ at: '2026-11-01', unitPrice: 3.5, unit: 'gal' }] } };
+  assert.deepEqual(recordsToHistory(historyToRecords(h)), h);
+  assert.deepEqual(rowToPrice({ key: 'milk', name: 'Milk', points: [{ at: 'x', unitPrice: 'free' }, ...h.milk.points] }).points, h.milk.points);
+
+  // Two phones bought milk on different days; the merge keeps both, newest first, once each.
+  const server = [{ id: 'milk', name: 'Milk', points: [{ at: '2026-11-01', unitPrice: 3.5, unit: 'gal' }] }];
+  const local = [
+    { id: 'milk', name: 'Whole milk', points: [{ at: '2026-11-05', unitPrice: 3.8, unit: 'gal' }, { at: '2026-11-01', unitPrice: 3.5, unit: 'gal' }] },
+    { id: 'egg', name: 'Eggs', points: [{ at: '2026-11-02', unitPrice: 0.3, unit: 'each' }] },
+  ];
+  const merged = mergeHistories(server, local);
+  assert.deepEqual(merged.map((r) => [r.id, r.name, r.points.map((p) => p.unitPrice)]), [
+    ['milk', 'Milk', [3.8, 3.5]],
+    ['egg', 'Eggs', [0.3]],
+  ]);
+
+  assert.deepEqual(rowToDiet({ diets: ['vegan', 'keto'], allergies: ['peanuts', 7], dislikes: ['olives'] }), {
+    diets: ['vegan'],
+    allergies: ['peanuts'],
+    dislikes: ['olives'],
+  });
+  assert.deepEqual(rowToDiet(null), { diets: [], allergies: [], dislikes: [] });
+  assert.deepEqual(
+    combineProfiles([
+      { diets: ['vegetarian'], allergies: [], dislikes: ['olives'] },
+      { diets: ['vegetarian', 'glutenFree'], allergies: ['peanuts'], dislikes: [] },
+    ]),
+    { diets: ['vegetarian', 'glutenFree'], allergies: ['peanuts'], dislikes: ['olives'] },
+  );
+});

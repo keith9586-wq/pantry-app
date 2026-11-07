@@ -1,8 +1,17 @@
-import type { InventoryItem, ShoppingItem, WasteEntry } from '../lib/types';
+import type { InventoryItem, Recipe, ShoppingItem, WasteEntry } from '../lib/types';
 import { newId, useStore } from '../store/useStore';
 import { supabase } from './client';
 import { diffById, unionById } from './diff';
 import {
+  historyToRecords,
+  mergeHistories,
+  priceToRow,
+  recipeToRow,
+  recordsToHistory,
+  rowToDiet,
+  rowToPrice,
+  rowToRecipe,
+  type PriceRecord,
   eventToRow,
   itemToRow,
   rowToEvent,
@@ -19,6 +28,8 @@ interface Synced {
   items: InventoryItem[];
   shopping: ShoppingItem[];
   log: Event[];
+  recipes: Recipe[];
+  prices: PriceRecord[];
 }
 
 const LOG_LIMIT = 500;
@@ -28,17 +39,21 @@ const withIds = (log: WasteEntry[]): Event[] => log.map((e) => (e.id ? (e as Eve
 
 async function pull(householdId: string): Promise<Synced> {
   const sb = supabase!;
-  const [items, shopping, events] = await Promise.all([
+  const [items, shopping, events, recipes, prices] = await Promise.all([
     sb.from('items').select('*').eq('household_id', householdId),
     sb.from('shopping_items').select('*').eq('household_id', householdId),
     sb.from('item_events').select('*').eq('household_id', householdId).order('at', { ascending: false }).limit(LOG_LIMIT),
+    sb.from('recipes').select('id, data').eq('household_id', householdId),
+    sb.from('prices').select('key, name, points').eq('household_id', householdId),
   ]);
-  const err = items.error ?? shopping.error ?? events.error;
+  const err = items.error ?? shopping.error ?? events.error ?? recipes.error ?? prices.error;
   if (err) throw new Error(err.message);
   return {
     items: (items.data as ItemRow[]).map(rowToItem),
     shopping: (shopping.data as ShoppingRow[]).map(rowToShopping),
     log: (events.data as EventRow[]).map(rowToEvent) as Event[],
+    recipes: (recipes.data as { id: string; data: unknown }[]).map(rowToRecipe).filter((r): r is Recipe => !!r),
+    prices: (prices.data as { key: string; name: string; points: unknown }[]).map(rowToPrice),
   };
 }
 
@@ -47,6 +62,8 @@ async function push(householdId: string, before: Synced, after: Synced): Promise
   const items = diffById(before.items, after.items);
   const shopping = diffById(before.shopping, after.shopping);
   const log = diffById(before.log, after.log);
+  const recipes = diffById(before.recipes, after.recipes);
+  const prices = diffById(before.prices, after.prices);
   // History is trimmed to the newest entries on the phone; only delete events that were
   // removed on purpose (an undo), not ones that simply aged out of the local list.
   const oldestKept = after.log.at(-1)?.at ?? '';
@@ -59,6 +76,10 @@ async function push(householdId: string, before: Synced, after: Synced): Promise
   if (shopping.deletes.length) ops.push(sb.from('shopping_items').delete().in('id', shopping.deletes));
   if (log.upserts.length) ops.push(sb.from('item_events').upsert(log.upserts.map((e) => eventToRow(e, householdId))));
   if (logDeletes.length) ops.push(sb.from('item_events').delete().in('id', logDeletes));
+  if (recipes.upserts.length) ops.push(sb.from('recipes').upsert(recipes.upserts.map((r) => recipeToRow(r, householdId))));
+  if (recipes.deletes.length) ops.push(sb.from('recipes').delete().in('id', recipes.deletes));
+  // Prices are only ever added to, so a missing key locally is not a reason to delete it for everyone.
+  if (prices.upserts.length) ops.push(sb.from('prices').upsert(prices.upserts.map((p) => priceToRow(p, householdId))));
   const results = await Promise.all(ops);
   const failed = results.find((r) => r.error);
   if (failed?.error) throw new Error(failed.error.message);
@@ -84,12 +105,18 @@ export function startSync(householdId: string, onStatus: (s: SyncStatus) => void
 
   const current = (): Synced => {
     const s = useStore.getState();
-    return { items: s.items, shopping: s.shopping, log: withIds(s.log) };
+    return { items: s.items, shopping: s.shopping, log: withIds(s.log), recipes: s.customRecipes, prices: historyToRecords(s.priceHistory) };
   };
 
   const apply = (data: Synced) => {
     applying = true;
-    useStore.getState().applyRemote(data);
+    useStore.getState().applyRemote({
+      items: data.items,
+      shopping: data.shopping,
+      log: data.log,
+      customRecipes: data.recipes,
+      priceHistory: recordsToHistory(data.prices),
+    });
     applying = false;
     synced = data;
   };
@@ -131,6 +158,8 @@ export function startSync(householdId: string, onStatus: (s: SyncStatus) => void
       log: unionById(server.log, local.log)
         .sort((a, b) => b.at.localeCompare(a.at))
         .slice(0, LOG_LIMIT),
+      recipes: unionById(server.recipes, local.recipes),
+      prices: mergeHistories(server.prices, local.prices),
     };
     await push(householdId, server, merged);
     if (!stopped) apply(merged);
@@ -139,10 +168,43 @@ export function startSync(householdId: string, onStatus: (s: SyncStatus) => void
 
   const unsubscribeStore = useStore.subscribe((state, prev) => {
     if (applying || stopped) return;
-    if (state.items === prev.items && state.shopping === prev.shopping && state.log === prev.log) return;
+    if (state.dietProfile !== prev.dietProfile) pushDiet();
+    if (
+      state.items === prev.items &&
+      state.shopping === prev.shopping &&
+      state.log === prev.log &&
+      state.customRecipes === prev.customRecipes &&
+      state.priceHistory === prev.priceHistory
+    )
+      return;
     if (pushTimer) clearTimeout(pushTimer);
     pushTimer = setTimeout(flush, 400);
   });
+
+  // Diets: each member writes their own row and reads everyone else's.
+  const pushDiet = () =>
+    enqueue(async () => {
+      if (stopped) return;
+      const { error } = await sb
+        .from('member_diets')
+        .upsert({ household_id: householdId, user_id: myId, diet: useStore.getState().dietProfile });
+      if (error) throw new Error(error.message);
+    });
+  const pullDiets = () =>
+    enqueue(async () => {
+      if (stopped) return;
+      const { data, error } = await sb.from('member_diets').select('user_id, diet').eq('household_id', householdId);
+      if (error) throw new Error(error.message);
+      useStore.getState().setHouseholdDiets(
+        (data as { user_id: string; diet: unknown }[]).filter((r) => r.user_id !== myId).map((r) => rowToDiet(r.diet)),
+      );
+    });
+  let myId = '';
+  enqueue(async () => {
+    myId = (await sb.auth.getSession()).data.session?.user.id ?? '';
+  });
+  pushDiet();
+  pullDiets();
 
   const scheduleRefresh = () => {
     if (pullTimer) clearTimeout(pullTimer);
@@ -154,6 +216,9 @@ export function startSync(householdId: string, onStatus: (s: SyncStatus) => void
     .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter }, scheduleRefresh)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items', filter }, scheduleRefresh)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'item_events', filter }, scheduleRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes', filter }, scheduleRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'prices', filter }, scheduleRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'member_diets', filter }, () => pullDiets())
     .subscribe((status) => {
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') onStatus('offline');
     });

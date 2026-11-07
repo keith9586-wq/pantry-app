@@ -9,12 +9,15 @@ import { can } from '../../lib/plans';
 import { colors, space } from '../../components/theme';
 import { rankRecipes } from '../../lib/recipes';
 import { isEmptyProfile, recipeFit } from '../../lib/diet';
-import { useRecipes, useStore } from '../../store/useStore';
+import { useActiveProfile, useOthersWithDiets, useRecipes, useStore } from '../../store/useStore';
 import { isCustom } from '../../lib/customRecipe';
 
 export default function RecipesScreen() {
   const items = useStore((s) => s.items);
-  const profile = useStore((s) => s.dietProfile);
+  const profile = useActiveProfile();
+  const others = useOthersWithDiets();
+  const fitEveryone = useStore((s) => s.fitEveryone);
+  const setFitEveryone = useStore((s) => s.setFitEveryone);
   const recipes = useRecipes();
   const { matches, hidden, mine } = useMemo(() => {
     const ranked = rankRecipes(items, recipes).map((m) => ({ ...m, fit: recipeFit(m.recipe, profile) }));
@@ -39,6 +42,13 @@ export default function RecipesScreen() {
     <View style={{ flexDirection: 'row', paddingHorizontal: space(4), paddingTop: space(3) }}>
       <Chip label="Ideas" active={view === 'ideas'} onPress={() => setView('ideas')} />
       <Chip label="This week" active={view === 'week'} onPress={() => setView('week')} />
+      {view === 'ideas' && others.length > 0 && (
+        <Chip
+          label={fitEveryone ? `Fits all ${others.length + 1} of you` : 'Fits just me'}
+          active={fitEveryone}
+          onPress={() => setFitEveryone(!fitEveryone)}
+        />
+      )}
     </View>
   );
 
@@ -59,7 +69,7 @@ export default function RecipesScreen() {
     hidden > 0 ? (
       <Pressable onPress={() => router.push('/diet')}>
         <Text style={styles.hidden}>
-          {hidden} {hidden === 1 ? 'recipe is' : 'recipes are'} hidden because {hidden === 1 ? "it doesn't" : "they don't"} fit your diet. Edit
+          {hidden} {hidden === 1 ? 'recipe is' : 'recipes are'} hidden because {hidden === 1 ? "it doesn't" : "they don't"} fit {fitEveryone && others.length ? "everyone's diets" : 'your diet'}. Edit
         </Text>
       </Pressable>
     ) : null;

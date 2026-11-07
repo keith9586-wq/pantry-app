@@ -21,7 +21,7 @@ import type {
 import { uuid } from '../lib/id';
 import { prunePlan, type MealPlan } from '../lib/planner';
 import { recordPrices, type PriceHistory } from '../lib/prices';
-import { EMPTY_PROFILE, type DietProfile } from '../lib/diet';
+import { combineProfiles, EMPTY_PROFILE, isEmptyProfile, type DietProfile } from '../lib/diet';
 
 export const newId = uuid;
 
@@ -67,7 +67,13 @@ interface State extends Snapshot {
   householdId: string | null;
   setHousehold: (id: string | null) => void;
   /** Replaces local data with the household's copy. Not undoable and not echoed back. */
-  applyRemote: (data: Partial<Pick<Snapshot, 'items' | 'shopping' | 'log'>>) => void;
+  applyRemote: (data: Partial<Pick<Snapshot, 'items' | 'shopping' | 'log'> & Pick<State, 'customRecipes' | 'priceHistory'>>) => void;
+  /** Diet profiles of the other people in the household. */
+  householdDiets: DietProfile[];
+  setHouseholdDiets: (d: DietProfile[]) => void;
+  /** Filter recipes for everyone at home, not just this phone's profile. */
+  fitEveryone: boolean;
+  setFitEveryone: (on: boolean) => void;
 
   /** The last change that can be undone, kept in memory only. */
   lastAction: { label: string; before: Snapshot } | null;
@@ -130,6 +136,10 @@ export const useStore = create<State>()(
       priceHistory: {},
       dietProfile: EMPTY_PROFILE,
       setDietProfile: (p) => set({ dietProfile: p }),
+      householdDiets: [],
+      setHouseholdDiets: (d) => set({ householdDiets: d }),
+      fitEveryone: true,
+      setFitEveryone: (on) => set({ fitEveryone: on }),
       customRecipes: [],
       saveRecipe: (r) =>
         set((s) => ({ customRecipes: s.customRecipes.some((x) => x.id === r.id) ? s.customRecipes.map((x) => (x.id === r.id ? r : x)) : [r, ...s.customRecipes] })),
@@ -155,7 +165,7 @@ export const useStore = create<State>()(
       setRemindersOn: (on) => set({ remindersOn: on }),
       recordScan: () => set((s) => ({ scanLog: [new Date().toISOString(), ...s.scanLog].slice(0, 100) })),
 
-      setHousehold: (id) => set({ householdId: id }),
+      setHousehold: (id) => set(id ? { householdId: id } : { householdId: null, householdDiets: [] }),
       applyRemote: (data) => set({ ...data, lastAction: null }),
 
       undo: () => {
@@ -305,12 +315,28 @@ export const useStore = create<State>()(
         priceHistory: s.priceHistory,
         dietProfile: s.dietProfile,
         customRecipes: s.customRecipes,
+        householdDiets: s.householdDiets,
+        fitEveryone: s.fitEveryone,
       }),
     },
   ),
 );
 
 export { moneyStats } from '../lib/money';
+
+/** Other people at home who have set a diet, allergy or dislike. */
+export function useOthersWithDiets(): DietProfile[] {
+  const others = useStore((s) => s.householdDiets);
+  return useMemo(() => others.filter((p) => !isEmptyProfile(p)), [others]);
+}
+
+/** The profile recipes are checked against: yours, or everyone's at home when that is switched on. */
+export function useActiveProfile(): DietProfile {
+  const mine = useStore((s) => s.dietProfile);
+  const everyone = useStore((s) => s.fitEveryone);
+  const others = useOthersWithDiets();
+  return useMemo(() => (everyone && others.length ? combineProfiles([mine, ...others]) : mine), [mine, everyone, others]);
+}
 
 /** The user's own recipes first, then the built-in ones. */
 export function useRecipes(): Recipe[] {
