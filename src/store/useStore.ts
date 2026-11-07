@@ -19,6 +19,7 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { makeLeftover } from '../lib/leftovers';
 import { prunePlan, type MealPlan } from '../lib/planner';
 import { recordPrices, type PriceHistory } from '../lib/prices';
 import { combineProfiles, EMPTY_PROFILE, isEmptyProfile, type DietProfile } from '../lib/diet';
@@ -87,10 +88,17 @@ interface State extends Snapshot {
   addParsed: (lines: ParsedLine[], purchasedAt?: Date) => void;
   updateItem: (id: string, patch: Partial<InventoryItem>) => void;
   cycleFill: (id: string) => void;
+  /** Pantry check: it's still there, with this much left. */
+  confirmItem: (id: string, fill: FillLevel) => void;
+  /** When the daily pantry check was last finished. */
+  lastCheckAt: string | null;
+  finishCheck: () => void;
+  addLeftover: (title: string, portions: number) => void;
   /** Logs part of an item as used, e.g. 2 of 12 eggs. */
   useSome: (id: string, amount: number) => void;
   finishItem: (id: string, outcome: 'used' | 'tossed') => void;
-  cook: (recipe: Recipe) => string[];
+  /** Deducts ingredients; leftovers > 0 also adds the dish as portions to eat by 4 days. */
+  cook: (recipe: Recipe, leftovers?: number) => string[];
 
   addShopping: (name: string, source?: ShoppingItem['source']) => void;
   toggleShopping: (id: string) => void;
@@ -258,14 +266,27 @@ export const useStore = create<State>()(
           };
         }),
 
-      cook: (recipe) => {
+      confirmItem: (id, fill) => {
+        const at = new Date().toISOString();
+        set((s) => ({ items: s.items.map((it) => (it.id === id ? { ...it, fill, checkedAt: at } : it)) }));
+      },
+      lastCheckAt: null,
+      finishCheck: () => set({ lastCheckAt: new Date().toISOString() }),
+      addLeftover: (title, portions) => {
+        if (!title.trim()) return;
+        remember(`Added leftover ${title.trim()}`);
+        set((s) => ({ items: [...s.items, makeLeftover(title, portions, new Date(), newId())] }));
+      },
+
+      cook: (recipe, leftovers = 0) => {
         const before = get().items;
         const { inventory, usedUp } = cookRecipe(before, recipe);
         remember(`Cooked ${recipe.title}`);
         const at = new Date().toISOString();
         const priceOf = (name: string) => before.find((i) => i.name === name)?.price;
+        const dish = leftovers > 0 ? [makeLeftover(recipe.title, leftovers, new Date(), newId())] : [];
         set((s) => ({
-          items: inventory,
+          items: [...inventory, ...dish],
           log: [...usedUp.map((name) => ({ id: newId(), name, at, outcome: 'used' as const, price: priceOf(name) })), ...s.log].slice(0, 500),
         }));
         return usedUp;
@@ -321,6 +342,7 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        lastCheckAt: s.lastCheckAt,
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,

@@ -4,6 +4,8 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **10-second pantry check.** Each item has a confidence score that falls with age, low fill and a passed date. Once a day the Kitchen tab offers a short stack of cards for only the least-sure items ("Still have spinach?"): swipe right if it's there, left if it's gone, or tap how much is left.
+- **Leftovers.** "I made this" can save portions of the dish as their own item ("Chili (Tuesday)", eat within 4 days). Leftovers sit at the top of the Kitchen tab and can also be added by hand.
 - **Receipt scanning.** Take a photo of a receipt (or paste e-receipt text). Store shorthand like `GV WHL MLK 1G` becomes "Whole Milk", and each item lands in your kitchen.
 - **Predicted use-by dates.** Every item gets an estimated date from what it is and where it's kept. Moving milk to the freezer re-estimates it.
 - **Barcode scanning.** Scan a package to add it, looked up in [Open Food Facts](https://world.openfoodfacts.org).
