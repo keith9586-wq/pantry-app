@@ -40,6 +40,9 @@ interface Snapshot {
 }
 
 interface State extends Snapshot {
+  /** Dates of receipt photo scans, for the free plan's monthly limit. */
+  scanLog: string[];
+  recordScan: () => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
   setHousehold: (id: string | null) => void;
@@ -107,6 +110,8 @@ export const useStore = create<State>()(
       log: [],
       lastAction: null,
       householdId: null,
+      scanLog: [],
+      recordScan: () => set((s) => ({ scanLog: [new Date().toISOString(), ...s.scanLog].slice(0, 100) })),
 
       setHousehold: (id) => set({ householdId: id }),
       applyRemote: (data) => set({ ...data, lastAction: null }),
@@ -251,6 +256,7 @@ export const useStore = create<State>()(
         purchaseCounts: s.purchaseCounts,
         log: s.log,
         householdId: s.householdId,
+        scanLog: s.scanLog,
       }),
     },
   ),

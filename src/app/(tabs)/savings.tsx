@@ -2,6 +2,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Card, Empty, SectionTitle } from '../../components/ui';
 import { colors, space } from '../../components/theme';
 import { moneyStats, useStore } from '../../store/useStore';
+import { Locked } from '../../components/Locked';
+import { usePlan } from '../../billing/billing';
+import { can } from '../../lib/plans';
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
@@ -9,6 +12,17 @@ export default function SavingsScreen() {
   const log = useStore((s) => s.log);
   const stats = moneyStats(log);
   const month = new Date().toLocaleString(undefined, { month: 'long' });
+  const plan = usePlan();
+
+  if (!can(plan, 'savings')) {
+    const teaser = stats.tossedCount > 0 ? `You've thrown out ${stats.tossedCount} items this month. ` : '';
+    return (
+      <Locked
+        title="See where your grocery money goes"
+        body={`${teaser}Track dollars eaten vs. thrown out and the foods you waste most.`}
+      />
+    );
+  }
 
   if (log.length === 0) {
     return (
