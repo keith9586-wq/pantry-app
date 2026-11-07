@@ -1,25 +1,28 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Chip, Empty } from '../../components/ui';
+import { Button, Chip, Empty, SectionTitle } from '../../components/ui';
 import { WeekPlan } from '../../components/WeekPlan';
 import { Locked } from '../../components/Locked';
 import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
 import { colors, space } from '../../components/theme';
-import { RECIPES } from '../../data/recipes';
 import { rankRecipes } from '../../lib/recipes';
 import { isEmptyProfile, recipeFit } from '../../lib/diet';
-import { useStore } from '../../store/useStore';
+import { useRecipes, useStore } from '../../store/useStore';
+import { isCustom } from '../../lib/customRecipe';
 
 export default function RecipesScreen() {
   const items = useStore((s) => s.items);
   const profile = useStore((s) => s.dietProfile);
-  const { matches, hidden } = useMemo(() => {
-    const ranked = rankRecipes(items, RECIPES).map((m) => ({ ...m, fit: recipeFit(m.recipe, profile) }));
+  const recipes = useRecipes();
+  const { matches, hidden, mine } = useMemo(() => {
+    const ranked = rankRecipes(items, recipes).map((m) => ({ ...m, fit: recipeFit(m.recipe, profile) }));
     const ok = ranked.filter((m) => m.fit.blocking.length === 0);
-    return { matches: ok, hidden: ranked.length - ok.length };
-  }, [items, profile]);
+    // Your own recipes always show, even with nothing on hand for them.
+    const shown = new Set(ok.map((m) => m.recipe.id));
+    return { matches: ok, hidden: ranked.length - ok.length, mine: recipes.filter((r) => isCustom(r.id) && !shown.has(r.id)) };
+  }, [items, recipes, profile]);
   const plan = usePlan();
   const [view, setView] = useState<'ideas' | 'week'>('ideas');
 
@@ -61,6 +64,25 @@ export default function RecipesScreen() {
       </Pressable>
     ) : null;
 
+  const yours = (
+    <>
+      {mine.length > 0 && <SectionTitle>Your recipes</SectionTitle>}
+      {mine.map((r) => (
+        <Pressable
+          key={r.id}
+          onPress={() => router.push({ pathname: '/recipe/[id]', params: { id: r.id } })}
+          style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}
+        >
+          <View style={styles.top}>
+            <Text style={styles.title}>{r.title}</Text>
+            <Text style={styles.time}>{r.minutes} min</Text>
+          </View>
+        </Pressable>
+      ))}
+      <Button kind="secondary" title="Add your own recipe" onPress={() => router.push('/recipe-edit')} style={{ marginTop: space(2) }} />
+    </>
+  );
+
   if (matches.length === 0) {
     return (
       <View style={{ flex: 1 }}>
@@ -73,6 +95,7 @@ export default function RecipesScreen() {
               : 'Add groceries and recipes appear here, ranked by what you already have and what needs using up first.'
           }
         />
+        <View style={{ paddingHorizontal: space(4) }}>{yours}</View>
         {hiddenNote}
       </View>
     );
@@ -108,6 +131,7 @@ export default function RecipesScreen() {
           )}
         </Pressable>
       ))}
+      {yours}
       {hiddenNote}
     </ScrollView>
   );

@@ -6,14 +6,15 @@ import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
 import { upcomingDays } from '../../lib/planner';
 import { colors, space } from '../../components/theme';
-import { RECIPES } from '../../data/recipes';
 import { findItem } from '../../lib/recipes';
 import { recipeFit } from '../../lib/diet';
-import { useStore } from '../../store/useStore';
+import { useRecipes, useStore } from '../../store/useStore';
+import { isCustom } from '../../lib/customRecipe';
 
 export default function RecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const recipe = RECIPES.find((r) => r.id === id);
+  const recipe = useRecipes().find((r) => r.id === id);
+  const deleteRecipe = useStore((s) => s.deleteRecipe);
   const items = useStore((s) => s.items);
   const cook = useStore((s) => s.cook);
   const addShopping = useStore((s) => s.addShopping);
@@ -115,6 +116,34 @@ export default function RecipeScreen() {
             router.back();
           }}
         />
+        {isCustom(recipe.id) && (
+          <View style={{ flexDirection: 'row', gap: space(2) }}>
+            <Button
+              kind="secondary"
+              title="Edit"
+              onPress={() => router.push({ pathname: '/recipe-edit', params: { id: recipe.id } })}
+              style={{ flex: 1 }}
+            />
+            <Button
+              kind="secondary"
+              title="Delete"
+              onPress={() =>
+                Alert.alert('Delete this recipe?', recipe.title, [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => {
+                      router.back();
+                      deleteRecipe(recipe.id);
+                    },
+                  },
+                ])
+              }
+              style={{ flex: 1 }}
+            />
+          </View>
+        )}
       </View>
     </ScrollView>
   );

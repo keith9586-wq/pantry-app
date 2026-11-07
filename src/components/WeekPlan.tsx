@@ -1,9 +1,8 @@
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { RECIPES } from '../data/recipes';
 import { missingForPlan, upcomingDays } from '../lib/planner';
-import { useStore } from '../store/useStore';
+import { useRecipes, useStore } from '../store/useStore';
 import { colors, space } from './theme';
 import { Button, SectionTitle } from './ui';
 
@@ -15,8 +14,9 @@ export function WeekPlan() {
   const addShopping = useStore((s) => s.addShopping);
   const now = new Date();
   const days = upcomingDays(now, 7);
-  const need = useMemo(() => missingForPlan(items, RECIPES, plan, new Date()), [items, plan]);
-  const byId = new Map(RECIPES.map((r) => [r.id, r]));
+  const recipes = useRecipes();
+  const need = useMemo(() => missingForPlan(items, recipes, plan, new Date()), [items, recipes, plan]);
+  const byId = new Map(recipes.map((r) => [r.id, r]));
   const planned = days.some((d) => (plan[d.key] ?? []).length > 0);
 
   return (
