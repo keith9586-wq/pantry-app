@@ -10,6 +10,8 @@ import type { ParsedLine } from '../../lib/types';
 import { usePlan } from '../../billing/billing';
 import { scansLeft } from '../../lib/plans';
 import { useStore } from '../../store/useStore';
+import { lineChange } from '../../lib/prices';
+import { PriceTag } from '../../components/PriceTag';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../sync/client';
 import { listPending, markHandled, type PendingReceipt } from '../../sync/pending';
 
@@ -31,6 +33,7 @@ TOTAL               25.76`;
 
 export default function ScanScreen() {
   const addParsed = useStore((s) => s.addParsed);
+  const priceHistory = useStore((s) => s.priceHistory);
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState('');
@@ -205,7 +208,12 @@ export default function ScanScreen() {
                   {r.quantity} {r.unit} · {CATEGORY_LABEL[r.category]}
                 </Text>
               </View>
-              {r.price !== undefined && <Text style={styles.price}>${r.price.toFixed(2)}</Text>}
+              {r.price !== undefined && (
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.price}>${r.price.toFixed(2)}</Text>
+                  <PriceTag change={lineChange(priceHistory, r)} />
+                </View>
+              )}
             </Pressable>
           ))}
           <View style={{ flexDirection: 'row', gap: space(2), marginTop: space(4) }}>
