@@ -6,6 +6,7 @@ import { colors, space } from '../../components/theme';
 import { CATEGORY_LABEL } from '../../lib/normalize';
 import { groupByAisle } from '../../lib/shopping';
 import { useStore } from '../../store/useStore';
+import { estimateList } from '../../lib/prices';
 import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
 
@@ -20,6 +21,8 @@ export default function ShoppingScreen() {
   const stockChecked = useStore((s) => s.stockChecked);
   const [draft, setDraft] = useState('');
   const autoList = can(usePlan(), 'autoList');
+  const priceHistory = useStore((s) => s.priceHistory);
+  const estimate = estimateList(priceHistory, shopping);
 
   // Staples you buy often are added automatically whenever the list is opened.
   useFocusEffect(
@@ -84,6 +87,12 @@ export default function ShoppingScreen() {
         ))
       )}
 
+      {estimate.priced > 0 && (
+        <Text style={styles.estimate}>
+          About ${estimate.total.toFixed(2)} for {estimate.priced} of {shopping.filter((s) => !s.checked).length} items, based on what you last paid.
+        </Text>
+      )}
+
       {checkedCount > 0 && (
         <Button
           title={`Put ${checkedCount} checked items away`}
@@ -113,5 +122,6 @@ const styles = StyleSheet.create({
   check: { fontSize: 20, color: colors.primary, marginRight: space(3) },
   name: { fontSize: 16, color: colors.text, flex: 1 },
   tag: { fontSize: 12, color: colors.muted },
+  estimate: { fontSize: 14, color: colors.muted, marginTop: space(4), textAlign: 'center' },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: space(3) },
 });

@@ -18,6 +18,7 @@ import type {
 
 import { uuid } from '../lib/id';
 import { prunePlan, type MealPlan } from '../lib/planner';
+import { recordPrices, type PriceHistory } from '../lib/prices';
 
 export const newId = uuid;
 
@@ -38,9 +39,12 @@ interface Snapshot {
   shopping: ShoppingItem[];
   log: WasteEntry[];
   purchaseCounts: PurchaseCounts;
+  /** What you paid for things, from receipts. Optional so older snapshots still restore. */
+  priceHistory?: PriceHistory;
 }
 
 interface State extends Snapshot {
+  priceHistory: PriceHistory;
   /** Dates of receipt photo scans, for the free plan's monthly limit. */
   scanLog: string[];
   remindersOn: boolean;
@@ -106,13 +110,14 @@ export const useStore = create<State>()(
     (set, get) => {
       /** Records the state before a change so the user can undo it. */
       const remember = (label: string) => {
-        const { items, shopping, log, purchaseCounts } = get();
-        set({ lastAction: { label, before: { items, shopping, log, purchaseCounts } } });
+        const { items, shopping, log, purchaseCounts, priceHistory } = get();
+        set({ lastAction: { label, before: { items, shopping, log, purchaseCounts, priceHistory } } });
       };
       return {
       items: [],
       shopping: [],
       purchaseCounts: {},
+      priceHistory: {},
       log: [],
       lastAction: null,
       householdId: null,
@@ -154,6 +159,7 @@ export const useStore = create<State>()(
           return {
             items: [...s.items, ...built],
             purchaseCounts: counts,
+            priceHistory: recordPrices(s.priceHistory, built, purchasedAt),
             shopping: s.shopping.filter((sh) => !bought.has(sh.key)),
           };
         });
@@ -276,6 +282,7 @@ export const useStore = create<State>()(
         scanLog: s.scanLog,
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
+        priceHistory: s.priceHistory,
       }),
     },
   ),

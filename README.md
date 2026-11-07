@@ -19,7 +19,8 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Use-by reminders.** One notification the morning before food expires, grouped per day. Tapping it opens recipes that use those items. You can turn it on from the Kitchen tab or in Settings.
 - **Accounts.** Everyone starts with an anonymous account. In Settings you can save it with your email (a 6-digit code) and sign in on a new phone to get your household back.
 - **Weekly meal planner.** Add a recipe to any of the next 7 days from its page, then see the week on the Recipes tab under "This week" with one list of what you still need to buy. Long-press a planned meal to remove it.
-- **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Plus ($4.99/month) unlocks unlimited scans, recipes, the weekly meal planner, the self-filling list and the Savings tab. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
+- **Price tracking.** Every scanned receipt records what you paid per unit. When you check a new receipt, each line says whether it's more or less than usual. The Savings tab lists price jumps and what you usually pay, and the shopping list shows a rough total from your last prices.
+- **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Plus ($4.99/month) unlocks unlimited scans, recipes, the weekly meal planner, the self-filling list and the Savings tab with price tracking. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
 
 Without a backend configured, the app runs fully on the phone and the sharing screen explains what to set up.
 
@@ -94,5 +95,5 @@ supabase/         backend functions and database schema
 
 ## Next steps
 
-1. Price tracking from receipts (v1.1).
-2. Diet and allergy profiles (v1.1).
+1. Diet and allergy profiles (v1.1).
+2. Share price history across a household.
