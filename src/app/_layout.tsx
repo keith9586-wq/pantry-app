@@ -25,6 +25,7 @@ export default function RootLayout() {
         <Stack.Screen name="barcode" options={{ presentation: 'modal', title: 'Scan a barcode' }} />
         <Stack.Screen name="household" options={{ title: 'Household' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="diet" options={{ title: 'Diet and allergies' }} />
         <Stack.Screen name="paywall" options={{ presentation: 'modal', title: 'Plans' }} />
       </Stack>
       <UndoBar />

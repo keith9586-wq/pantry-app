@@ -8,6 +8,7 @@ import { upcomingDays } from '../../lib/planner';
 import { colors, space } from '../../components/theme';
 import { RECIPES } from '../../data/recipes';
 import { findItem } from '../../lib/recipes';
+import { recipeFit } from '../../lib/diet';
 import { useStore } from '../../store/useStore';
 
 export default function RecipeScreen() {
@@ -18,6 +19,7 @@ export default function RecipeScreen() {
   const addShopping = useStore((s) => s.addShopping);
   const addToPlan = useStore((s) => s.addToPlan);
   const canPlan = can(usePlan(), 'mealPlanner');
+  const profile = useStore((s) => s.dietProfile);
   const [picking, setPicking] = useState(false);
 
   const rows = useMemo(
@@ -28,6 +30,9 @@ export default function RecipeScreen() {
   if (!recipe) return <Empty title="Recipe not found" body="It may have been removed." />;
 
   const missing = rows.filter((r) => !r.item && !r.ing.optional);
+  const fit = recipeFit(recipe, profile);
+  const conflicts = [...fit.blocking, ...fit.skip];
+  const reasonFor = (name: string) => conflicts.find((c) => c.ingredient.name === name)?.reason;
 
   return (
     <ScrollView contentContainerStyle={{ padding: space(4), paddingBottom: space(16) }}>
@@ -35,6 +40,14 @@ export default function RecipeScreen() {
       <Text style={styles.meta}>
         {recipe.minutes} minutes · serves {recipe.servings}
       </Text>
+
+      {fit.blocking.length > 0 && (
+        <View style={styles.warn}>
+          <Text style={styles.warnText}>
+            Doesn't fit your diet: {fit.blocking.map((c) => `${c.ingredient.name} (${c.reason.toLowerCase()})`).join(', ')}.
+          </Text>
+        </View>
+      )}
 
       <SectionTitle>Ingredients</SectionTitle>
       {rows.map(({ ing, item }) => (
@@ -44,6 +57,7 @@ export default function RecipeScreen() {
             {ing.quantity} {ing.unit} {ing.name}
             {ing.optional ? ' (optional)' : ''}
           </Text>
+          {reasonFor(ing.name) && <Text style={styles.conflict}>{ing.optional ? 'leave out' : reasonFor(ing.name)}</Text>}
           {item && <Text style={styles.have}>have</Text>}
         </View>
       ))}
@@ -111,6 +125,9 @@ const styles = StyleSheet.create({
   ingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: space(1.5) },
   dot: { fontSize: 14, width: 22 },
   ing: { fontSize: 16, color: colors.text, flex: 1 },
+  warn: { backgroundColor: colors.warnSoft, borderRadius: 12, padding: space(3), marginTop: space(3) },
+  warnText: { fontSize: 14, color: colors.warn, lineHeight: 20 },
+  conflict: { fontSize: 12, fontWeight: '600', color: colors.warn, marginLeft: space(2) },
   have: { fontSize: 12, fontWeight: '600', color: colors.primary },
   step: { fontSize: 16, color: colors.text, lineHeight: 23, marginBottom: space(2) },
 });
