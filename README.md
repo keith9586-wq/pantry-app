@@ -21,7 +21,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Accounts.** Everyone starts with an anonymous account. In Settings you can save it with your email (a 6-digit code) and sign in on a new phone to get your household back.
 - **Weekly meal planner.** Add a recipe to any of the next 7 days from its page, then see the week on the Recipes tab under "This week" with one list of what you still need to buy. Long-press a planned meal to remove it.
 - **Price tracking.** Every scanned receipt records what you paid per unit. When you check a new receipt, each line says whether it's more or less than usual. The Savings tab lists price jumps and what you usually pay, and the shopping list shows a rough total from your last prices.
-- **Your own recipes.** "Add your own recipe" on the Recipes tab takes a name, time, servings, and ingredients and steps typed or pasted one per line ("1 1/2 cups flour", "1 onion, chopped", "salt to taste"). They're ranked with the built-in ones, work in the meal planner and "I made this", and can be edited or deleted.
+- **Your own recipes.** "Add your own recipe" on the Recipes tab takes a name, time, servings, and ingredients and steps typed or pasted one per line ("1 1/2 cups flour", "1 onion, chopped", "salt to taste"). You can also paste a link from almost any recipe site (anything that publishes schema.org Recipe data, which Google requires for recipe cards) and the form fills itself in. They're ranked with the built-in ones, work in the meal planner and "I made this", and can be edited or deleted.
 - **Diet and allergies.** In Settings, pick diets (vegetarian, vegan, pescatarian, gluten-free, dairy-free), allergies and foods you don't eat. Recipes that don't fit are hidden, optional ingredients that don't fit are marked "leave out", and a recipe page warns you if it conflicts. Scanning a barcode checks the product's label (Open Food Facts allergens, "may contain" traces and vegan/vegetarian analysis) against your allergies and diet. Free for everyone.
 - **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Plus ($4.99/month) unlocks unlimited scans, recipes, the weekly meal planner, the self-filling list and the Savings tab with price tracking. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
 
@@ -105,4 +105,5 @@ supabase/         backend functions and database schema
 
 ## Next steps
 
-1. Import a recipe from a web link.
+1. Open shared recipe links straight into the app (share sheet).
+2. A Claude fallback for recipe pages without structured data.
