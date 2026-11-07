@@ -95,6 +95,12 @@ src/data/         starter recipes
 supabase/         backend functions and database schema
 ```
 
+## Launch kit
+
+- `docs/store-listing.md` has the App Store and Play copy, keywords, screenshot list, privacy questionnaire answers and a pre-submit checklist.
+- `docs/privacy-policy.md` is a privacy policy that matches what the app actually does. Fill in the brackets and host it.
+- `assets/` has the app icon, Android adaptive icon layers (green background, jar-and-leaf foreground, monochrome) and favicon.
+
 ## Next steps
 
 1. Share price history and diet profiles across a household.
