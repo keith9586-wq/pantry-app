@@ -151,3 +151,45 @@ test('groupByAisle orders by store layout', () => {
   ]);
   assert.deepEqual(groups.map((g) => g.category), ['produce', 'dairy']);
 });
+
+import { planReminders } from '../reminders';
+
+test('planReminders groups items into one morning reminder per day', () => {
+  const now = new Date(2026, 10, 7, 12, 0); // Nov 7, noon
+  const exp = (d: number) => new Date(2026, 10, d, 18).toISOString();
+  const r = planReminders(
+    [
+      item('Milk', { expiresAt: exp(10) }),
+      item('Spinach', { expiresAt: exp(10) }),
+      item('Bread', { expiresAt: exp(8) }), // day-before reminder (Nov 7 9am) has passed -> Nov 8 9am
+      item('Yogurt', { expiresAt: exp(7) }), // expires today, both slots passed -> skipped
+      item('Rice', { expiresAt: exp(30) }), // beyond 14-day horizon
+      item('Salt', { expiresAt: null }),
+    ],
+    now,
+  );
+  assert.equal(r.length, 2);
+  assert.equal(r[0].at.getDate(), 8);
+  assert.equal(r[0].at.getHours(), 9);
+  assert.equal(r[0].title, 'Use your bread soon');
+  assert.equal(r[1].at.getDate(), 9);
+  assert.equal(r[1].title, '2 items to use up soon');
+  assert.match(r[1].body, /Milk, Spinach expire soon/);
+});
+
+import { dayKey, missingForPlan, prunePlan, upcomingDays } from '../planner';
+
+test('meal planner lists what the week still needs', () => {
+  const now = new Date(2026, 10, 7, 12);
+  const days = upcomingDays(now, 3);
+  assert.deepEqual(days.map((d) => d.key), ['2026-11-07', '2026-11-08', '2026-11-09']);
+  assert.equal(days[0].label, 'Today');
+  assert.equal(dayKey(new Date(2026, 0, 5)), '2026-01-05');
+
+  const plan = { '2026-11-06': ['o'], '2026-11-07': ['o'], '2026-11-08': ['s', 'o'], '2026-11-09': [] };
+  assert.deepEqual(Object.keys(prunePlan(plan, now)), ['2026-11-07', '2026-11-08']);
+
+  const need = missingForPlan([item('Baby Spinach')], [omelette, steak], plan, now);
+  // eggs needed by both recipes, steak by one; spinach is on hand; salt is assumed.
+  assert.deepEqual(need.map((n) => [n.key, n.forRecipes.length]), [['egg', 2], ['steak', 1]]);
+});

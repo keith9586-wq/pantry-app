@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { initBilling, setHouseholdPlan } from '../billing/billing';
+import { planFromHousehold } from '../lib/plans';
 import { create } from 'zustand';
 import { useStore } from '../store/useStore';
 import { supabase } from './client';
@@ -14,6 +16,33 @@ export const useSyncStatus = create<{ status: SyncStatus; set: (s: SyncStatus) =
 export function useHouseholdSync() {
   const householdId = useStore((s) => s.householdId);
   const setStatus = useSyncStatus((s) => s.set);
+
+  // Billing starts once; with a backend it uses the Supabase user id so the
+  // subscription webhook can find the payer's household.
+  useEffect(() => {
+    if (!supabase) {
+      initBilling();
+      return;
+    }
+    ensureSignedIn()
+      .then((uid) => initBilling(uid))
+      .catch(() => initBilling());
+  }, []);
+
+  // Household members share the payer's Family plan.
+  useEffect(() => {
+    if (!householdId || !supabase) {
+      setHouseholdPlan('free');
+      return;
+    }
+    supabase
+      .from('households')
+      .select('family_until')
+      .eq('id', householdId)
+      .maybeSingle()
+      .then(({ data }) => setHouseholdPlan(planFromHousehold((data?.family_until as string | null) ?? null)));
+  }, [householdId]);
+
   useEffect(() => {
     if (!householdId || !supabase) return;
     let stop: (() => void) | null = null;

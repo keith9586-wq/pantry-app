@@ -1,6 +1,6 @@
 import type { Recipe } from '../lib/types';
 
-/** Starter recipes. Later these move to the backend and users can add their own. */
+/** Starter recipes. People can add their own from the Recipes tab (see customRecipe.ts). */
 export const RECIPES: Recipe[] = [
   {
     id: 'spinach-omelette',

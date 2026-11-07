@@ -1,4 +1,5 @@
 import { guessCategory } from './normalize';
+import type { Allergen } from './diet';
 import type { ParsedLine } from './types';
 
 /**
@@ -23,9 +24,54 @@ export function productFromOpenFoodFacts(json: unknown): ParsedLine | null {
   };
 }
 
-export async function lookupBarcode(code: string): Promise<ParsedLine | null> {
-  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,generic_name,brands,categories_tags`;
+/** What the label says, from Open Food Facts. Empty when the product has no data. */
+export interface ProductFacts {
+  allergens: Allergen[];
+  /** "May contain" warnings. */
+  traces: Allergen[];
+  vegan: boolean | null;
+  vegetarian: boolean | null;
+  glutenFree: boolean;
+}
+
+const OFF_ALLERGEN: Record<string, Allergen> = {
+  'en:milk': 'dairy',
+  'en:eggs': 'eggs',
+  'en:gluten': 'gluten',
+  'en:peanuts': 'peanuts',
+  'en:nuts': 'treeNuts',
+  'en:fish': 'fish',
+  'en:crustaceans': 'shellfish',
+  'en:molluscs': 'shellfish',
+  'en:soybeans': 'soy',
+  'en:sesame-seeds': 'sesame',
+};
+
+const tagList = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+const allergensFrom = (v: unknown) => [...new Set(tagList(v).map((t) => OFF_ALLERGEN[t]).filter(Boolean))];
+
+export function factsFromOpenFoodFacts(json: unknown): ProductFacts {
+  const p = ((json as { product?: Record<string, unknown> })?.product ?? {}) as Record<string, unknown>;
+  const analysis = tagList(p.ingredients_analysis_tags);
+  const labels = tagList(p.labels_tags);
+  const allergens = allergensFrom(p.allergens_tags);
+  const flag = (yes: string, no: string) => (analysis.includes(no) ? false : analysis.includes(yes) || labels.includes(yes) ? true : null);
+  return {
+    allergens,
+    traces: allergensFrom(p.traces_tags).filter((a) => !allergens.includes(a)),
+    vegan: flag('en:vegan', 'en:non-vegan'),
+    vegetarian: flag('en:vegetarian', 'en:non-vegetarian'),
+    glutenFree: labels.includes('en:gluten-free') || labels.includes('en:no-gluten'),
+  };
+}
+
+const FIELDS = 'product_name,generic_name,brands,categories_tags,allergens_tags,traces_tags,labels_tags,ingredients_analysis_tags';
+
+export async function lookupBarcode(code: string): Promise<{ line: ParsedLine; facts: ProductFacts } | null> {
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${FIELDS}`;
   const res = await fetch(url, { headers: { 'User-Agent': 'PantryApp/0.1 (mobile)' } });
   if (!res.ok) return null;
-  return productFromOpenFoodFacts(await res.json());
+  const json = await res.json();
+  const line = productFromOpenFoodFacts(json);
+  return line ? { line, facts: factsFromOpenFoodFacts(json) } : null;
 }

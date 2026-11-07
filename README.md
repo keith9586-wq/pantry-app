@@ -16,6 +16,14 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Household sharing.** Tap Household on the Kitchen tab to create a household or join one with an invite code. The kitchen, shopping list and history then sync across everyone's phones with live updates. People start with an anonymous account, so there's no sign-up form.
 - **Forwarded e-receipts.** Each household gets its own email address. Forwarded receipts are read on the server and wait in the Scan tab for a quick check before they're added.
 
+- **Use-by reminders.** One notification the morning before food expires, grouped per day. Tapping it opens recipes that use those items. You can turn it on from the Kitchen tab or in Settings.
+- **Accounts.** Everyone starts with an anonymous account. In Settings you can save it with your email (a 6-digit code) and sign in on a new phone to get your household back.
+- **Weekly meal planner.** Add a recipe to any of the next 7 days from its page, then see the week on the Recipes tab under "This week" with one list of what you still need to buy. Long-press a planned meal to remove it.
+- **Price tracking.** Every scanned receipt records what you paid per unit. When you check a new receipt, each line says whether it's more or less than usual. The Savings tab lists price jumps and what you usually pay, and the shopping list shows a rough total from your last prices.
+- **Your own recipes.** "Add your own recipe" on the Recipes tab takes a name, time, servings, and ingredients and steps typed or pasted one per line ("1 1/2 cups flour", "1 onion, chopped", "salt to taste"). They're ranked with the built-in ones, work in the meal planner and "I made this", and can be edited or deleted.
+- **Diet and allergies.** In Settings, pick diets (vegetarian, vegan, pescatarian, gluten-free, dairy-free), allergies and foods you don't eat. Recipes that don't fit are hidden, optional ingredients that don't fit are marked "leave out", and a recipe page warns you if it conflicts. Scanning a barcode checks the product's label (Open Food Facts allergens, "may contain" traces and vegan/vegetarian analysis) against your allergies and diet. Free for everyone.
+- **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Plus ($4.99/month) unlocks unlimited scans, recipes, the weekly meal planner, the self-filling list and the Savings tab with price tracking. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
+
 Without a backend configured, the app runs fully on the phone and the sharing screen explains what to set up.
 
 ## Run it
@@ -38,6 +46,8 @@ Photo receipt scanning needs the server function below. Without it, the Scan tab
 | `functions/parse-receipt` | Takes a receipt photo or text, asks Claude to read it, returns clean line items as JSON. |
 | `functions/inbound-email` | Webhook for forwarded e-receipt emails. Each household gets an address like `r-<code>@receipts.<your-domain>`; parsed items wait in `pending_receipts` for someone to confirm. |
 | `migrations/0001_households.sql` | Households, members, invite codes, shared items and shopping list, history for the money view, row-level security so people only see their own household. |
+| `functions/revenuecat-webhook` | Marks a household as Family while its owner's subscription is active, so every member gets Family features. |
+| `migrations/0003_family_plan.sql` | `family_until` on households, and a 6-person limit on joining. |
 | `migrations/0002_sync.sql` | Phone-generated ids for history events, leaving a household, and `updated_at` / `updated_by` stamps. |
 
 Setup:
@@ -51,12 +61,21 @@ supabase functions deploy inbound-email
 cp .env.example .env   # then fill in EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY
 ```
 
-In the Supabase dashboard, turn on **Anonymous sign-ins** (Authentication → Providers) so household sharing works without a sign-up form.
+In the Supabase dashboard, turn on **Anonymous sign-ins** (Authentication → Providers) so household sharing works without a sign-up form. For email sign-in by code, edit the **Magic Link** and **Change Email Address** email templates (Authentication → Email Templates) to include `{{ .Token }}`, so the email contains the 6-digit code.
 
 For email forwarding, set `EXPO_PUBLIC_RECEIPT_EMAIL_DOMAIN` in `.env` to the domain your provider receives mail for, and point the provider (for example Postmark inbound) at
 `https://<project>.supabase.co/functions/v1/inbound-email?secret=<INBOUND_EMAIL_SECRET>`.
 
 The Anthropic API key only ever lives in Supabase secrets, never in the app.
+
+### Subscriptions (RevenueCat)
+
+1. Create products in App Store Connect and Google Play (monthly Plus and Family, each with a 7-day free trial).
+2. In RevenueCat, add both apps, create entitlements named exactly `plus` and `family`, attach the products, and put a Plus and a Family package in the current offering (product ids containing "plus" / "family").
+3. Put the public SDK keys in `.env` as `EXPO_PUBLIC_REVENUECAT_IOS_KEY` and `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`.
+4. Deploy `revenuecat-webhook`, set `supabase secrets set REVENUECAT_WEBHOOK_AUTH=<random string>`, and add the webhook in RevenueCat with that value as the Authorization header.
+
+In-app purchases need a development build (`npx expo run:ios` / `run:android` or EAS Build); Expo Go can't make real purchases.
 
 ## Checks
 
@@ -78,6 +97,5 @@ supabase/         backend functions and database schema
 
 ## Next steps
 
-1. Upgrade anonymous accounts to email sign-in so a household survives a lost phone.
-2. Subscriptions (Plus and Family) with a free trial.
-3. Push notifications for food about to expire.
+1. Share price history and diet profiles across a household.
+2. Share your own recipes with your household, and import a recipe from a web link.

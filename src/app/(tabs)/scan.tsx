@@ -7,7 +7,11 @@ import { colors, space } from '../../components/theme';
 import { CATEGORY_LABEL } from '../../lib/normalize';
 import { parseReceiptImage, parseReceiptText } from '../../lib/receipt';
 import type { ParsedLine } from '../../lib/types';
+import { usePlan } from '../../billing/billing';
+import { scansLeft } from '../../lib/plans';
 import { useStore } from '../../store/useStore';
+import { lineChange } from '../../lib/prices';
+import { PriceTag } from '../../components/PriceTag';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../sync/client';
 import { listPending, markHandled, type PendingReceipt } from '../../sync/pending';
 
@@ -29,11 +33,16 @@ TOTAL               25.76`;
 
 export default function ScanScreen() {
   const addParsed = useStore((s) => s.addParsed);
+  const priceHistory = useStore((s) => s.priceHistory);
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState('');
   const [showPaste, setShowPaste] = useState(!API_URL);
   const householdId = useStore((s) => s.householdId);
+  const plan = usePlan();
+  const scanLog = useStore((s) => s.scanLog);
+  const recordScan = useStore((s) => s.recordScan);
+  const left = scansLeft(plan, scanLog);
   const [pending, setPending] = useState<PendingReceipt[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
@@ -60,6 +69,13 @@ export default function ScanScreen() {
       setShowPaste(true);
       return;
     }
+    if (left <= 0) {
+      Alert.alert('Monthly scans used up', 'The free plan includes 5 receipt photo scans a month. Plus makes them unlimited.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'See plans', onPress: () => router.push('/paywall') },
+      ]);
+      return;
+    }
     const perm =
       source === 'camera'
         ? await ImagePicker.requestCameraPermissionsAsync()
@@ -75,6 +91,7 @@ export default function ScanScreen() {
     setBusy(true);
     try {
       const lines = await parseReceiptImage(result.assets[0].base64, API_URL, API_KEY);
+      if (lines.length > 0) recordScan();
       if (lines.length === 0) Alert.alert('No items found', 'Try a flatter, well-lit photo of the full receipt.');
       setRows(lines.map((l) => ({ ...l, keep: true })));
     } catch (e) {
@@ -142,6 +159,11 @@ export default function ScanScreen() {
               <Button title="Take a photo" onPress={() => fromImage('camera')} />
               <Button kind="secondary" title="Choose from photos" onPress={() => fromImage('library')} />
             </View>
+            {Number.isFinite(left) && (
+              <Text style={[styles.body, { marginTop: space(3), fontSize: 13 }]}>
+                {left} free photo {left === 1 ? 'scan' : 'scans'} left this month
+              </Text>
+            )}
           </Card>
           {busy && (
             <View style={styles.busy}>
@@ -186,7 +208,12 @@ export default function ScanScreen() {
                   {r.quantity} {r.unit} · {CATEGORY_LABEL[r.category]}
                 </Text>
               </View>
-              {r.price !== undefined && <Text style={styles.price}>${r.price.toFixed(2)}</Text>}
+              {r.price !== undefined && (
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.price}>${r.price.toFixed(2)}</Text>
+                  <PriceTag change={lineChange(priceHistory, r)} />
+                </View>
+              )}
             </Pressable>
           ))}
           <View style={{ flexDirection: 'row', gap: space(2), marginTop: space(4) }}>

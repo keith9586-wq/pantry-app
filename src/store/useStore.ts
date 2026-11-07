@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useMemo } from 'react';
+import { RECIPES } from '../data/recipes';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { predictExpiry } from '../lib/expiry';
@@ -17,6 +19,9 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { prunePlan, type MealPlan } from '../lib/planner';
+import { recordPrices, type PriceHistory } from '../lib/prices';
+import { EMPTY_PROFILE, type DietProfile } from '../lib/diet';
 
 export const newId = uuid;
 
@@ -37,9 +42,27 @@ interface Snapshot {
   shopping: ShoppingItem[];
   log: WasteEntry[];
   purchaseCounts: PurchaseCounts;
+  /** What you paid for things, from receipts. Optional so older snapshots still restore. */
+  priceHistory?: PriceHistory;
 }
 
 interface State extends Snapshot {
+  priceHistory: PriceHistory;
+  /** This phone's diet, allergies and dislikes. Not shared with the household. */
+  dietProfile: DietProfile;
+  setDietProfile: (p: DietProfile) => void;
+  /** Recipes the user typed in. Ids start with "my-". */
+  customRecipes: Recipe[];
+  saveRecipe: (r: Recipe) => void;
+  deleteRecipe: (id: string) => void;
+  /** Dates of receipt photo scans, for the free plan's monthly limit. */
+  scanLog: string[];
+  remindersOn: boolean;
+  mealPlan: MealPlan;
+  addToPlan: (day: string, recipeId: string) => void;
+  removeFromPlan: (day: string, recipeId: string) => void;
+  setRemindersOn: (on: boolean) => void;
+  recordScan: () => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
   setHousehold: (id: string | null) => void;
@@ -97,16 +120,40 @@ export const useStore = create<State>()(
     (set, get) => {
       /** Records the state before a change so the user can undo it. */
       const remember = (label: string) => {
-        const { items, shopping, log, purchaseCounts } = get();
-        set({ lastAction: { label, before: { items, shopping, log, purchaseCounts } } });
+        const { items, shopping, log, purchaseCounts, priceHistory } = get();
+        set({ lastAction: { label, before: { items, shopping, log, purchaseCounts, priceHistory } } });
       };
       return {
       items: [],
       shopping: [],
       purchaseCounts: {},
+      priceHistory: {},
+      dietProfile: EMPTY_PROFILE,
+      setDietProfile: (p) => set({ dietProfile: p }),
+      customRecipes: [],
+      saveRecipe: (r) =>
+        set((s) => ({ customRecipes: s.customRecipes.some((x) => x.id === r.id) ? s.customRecipes.map((x) => (x.id === r.id ? r : x)) : [r, ...s.customRecipes] })),
+      deleteRecipe: (id) =>
+        set((s) => ({
+          customRecipes: s.customRecipes.filter((r) => r.id !== id),
+          mealPlan: Object.fromEntries(Object.entries(s.mealPlan).map(([d, ids]) => [d, ids.filter((x) => x !== id)])),
+        })),
       log: [],
       lastAction: null,
       householdId: null,
+      scanLog: [],
+      remindersOn: false,
+      mealPlan: {},
+      addToPlan: (day, recipeId) =>
+        set((s) => {
+          const plan = prunePlan(s.mealPlan, new Date());
+          const ids = plan[day] ?? [];
+          return { mealPlan: { ...plan, [day]: ids.includes(recipeId) ? ids : [...ids, recipeId] } };
+        }),
+      removeFromPlan: (day, recipeId) =>
+        set((s) => ({ mealPlan: prunePlan({ ...s.mealPlan, [day]: (s.mealPlan[day] ?? []).filter((id) => id !== recipeId) }, new Date()) })),
+      setRemindersOn: (on) => set({ remindersOn: on }),
+      recordScan: () => set((s) => ({ scanLog: [new Date().toISOString(), ...s.scanLog].slice(0, 100) })),
 
       setHousehold: (id) => set({ householdId: id }),
       applyRemote: (data) => set({ ...data, lastAction: null }),
@@ -132,6 +179,7 @@ export const useStore = create<State>()(
           return {
             items: [...s.items, ...built],
             purchaseCounts: counts,
+            priceHistory: recordPrices(s.priceHistory, built, purchasedAt),
             shopping: s.shopping.filter((sh) => !bought.has(sh.key)),
           };
         });
@@ -251,9 +299,21 @@ export const useStore = create<State>()(
         purchaseCounts: s.purchaseCounts,
         log: s.log,
         householdId: s.householdId,
+        scanLog: s.scanLog,
+        remindersOn: s.remindersOn,
+        mealPlan: s.mealPlan,
+        priceHistory: s.priceHistory,
+        dietProfile: s.dietProfile,
+        customRecipes: s.customRecipes,
       }),
     },
   ),
 );
 
 export { moneyStats } from '../lib/money';
+
+/** The user's own recipes first, then the built-in ones. */
+export function useRecipes(): Recipe[] {
+  const custom = useStore((s) => s.customRecipes);
+  return useMemo(() => [...custom, ...RECIPES], [custom]);
+}
