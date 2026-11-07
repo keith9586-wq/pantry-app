@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Empty } from '../../components/ui';
+import { Chip, Empty } from '../../components/ui';
+import { WeekPlan } from '../../components/WeekPlan';
 import { Locked } from '../../components/Locked';
 import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
@@ -14,6 +15,7 @@ export default function RecipesScreen() {
   const items = useStore((s) => s.items);
   const matches = useMemo(() => rankRecipes(items, RECIPES), [items]);
   const plan = usePlan();
+  const [view, setView] = useState<'ideas' | 'week'>('ideas');
 
   if (!can(plan, 'recipes')) {
     return (
@@ -21,6 +23,26 @@ export default function RecipesScreen() {
         title="Cook from what you have"
         body="See recipes ranked by what's already in your kitchen and what's about to expire, then deduct ingredients in one tap."
       />
+    );
+  }
+
+  const tabs = (
+    <View style={{ flexDirection: 'row', paddingHorizontal: space(4), paddingTop: space(3) }}>
+      <Chip label="Ideas" active={view === 'ideas'} onPress={() => setView('ideas')} />
+      <Chip label="This week" active={view === 'week'} onPress={() => setView('week')} />
+    </View>
+  );
+
+  if (view === 'week') {
+    return (
+      <View style={{ flex: 1 }}>
+        {tabs}
+        {can(plan, 'mealPlanner') ? (
+          <WeekPlan />
+        ) : (
+          <Locked title="Plan the week" body="Put recipes on days and get one shopping list for everything you're missing." />
+        )}
+      </View>
     );
   }
 
@@ -34,7 +56,8 @@ export default function RecipesScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={{ padding: space(4), paddingBottom: space(16) }}>
+    <ScrollView contentContainerStyle={{ padding: space(4), paddingTop: 0, paddingBottom: space(16) }}>
+      <View style={{ marginHorizontal: -space(4), marginBottom: space(3) }}>{tabs}</View>
       {matches.map((m) => (
         <Pressable
           key={m.recipe.id}

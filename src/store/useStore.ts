@@ -17,6 +17,7 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { prunePlan, type MealPlan } from '../lib/planner';
 
 export const newId = uuid;
 
@@ -43,6 +44,9 @@ interface State extends Snapshot {
   /** Dates of receipt photo scans, for the free plan's monthly limit. */
   scanLog: string[];
   remindersOn: boolean;
+  mealPlan: MealPlan;
+  addToPlan: (day: string, recipeId: string) => void;
+  removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
@@ -114,6 +118,15 @@ export const useStore = create<State>()(
       householdId: null,
       scanLog: [],
       remindersOn: false,
+      mealPlan: {},
+      addToPlan: (day, recipeId) =>
+        set((s) => {
+          const plan = prunePlan(s.mealPlan, new Date());
+          const ids = plan[day] ?? [];
+          return { mealPlan: { ...plan, [day]: ids.includes(recipeId) ? ids : [...ids, recipeId] } };
+        }),
+      removeFromPlan: (day, recipeId) =>
+        set((s) => ({ mealPlan: prunePlan({ ...s.mealPlan, [day]: (s.mealPlan[day] ?? []).filter((id) => id !== recipeId) }, new Date()) })),
       setRemindersOn: (on) => set({ remindersOn: on }),
       recordScan: () => set((s) => ({ scanLog: [new Date().toISOString(), ...s.scanLog].slice(0, 100) })),
 
@@ -262,6 +275,7 @@ export const useStore = create<State>()(
         householdId: s.householdId,
         scanLog: s.scanLog,
         remindersOn: s.remindersOn,
+        mealPlan: s.mealPlan,
       }),
     },
   ),
