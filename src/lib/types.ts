@@ -75,4 +75,9 @@ export interface WasteEntry {
   price?: number;
   at: string;
   outcome: 'used' | 'tossed';
+  /** Item key, how much was finished, and the share of it thrown out (0 when eaten). */
+  key?: string;
+  quantity?: number;
+  unit?: string;
+  share?: number;
 }

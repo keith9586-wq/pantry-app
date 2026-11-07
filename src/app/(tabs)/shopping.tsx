@@ -9,6 +9,7 @@ import { useStore } from '../../store/useStore';
 import { estimateList } from '../../lib/prices';
 import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
+import { adviceTag, buySizeAdvice } from '../../lib/buysize';
 
 const SOURCE_LABEL = { auto: 'running low', recipe: 'for a recipe', manual: '' } as const;
 
@@ -23,6 +24,8 @@ export default function ShoppingScreen() {
   const autoList = can(usePlan(), 'autoList');
   const priceHistory = useStore((s) => s.priceHistory);
   const estimate = estimateList(priceHistory, shopping);
+  const log = useStore((s) => s.log);
+  const sizeTips = new Map(autoList ? buySizeAdvice(log).map((a) => [a.key, a]) : []);
 
   // Staples you buy often are added automatically whenever the list is opened.
   useFocusEffect(
@@ -80,7 +83,11 @@ export default function ShoppingScreen() {
               >
                 <Text style={styles.check}>{s.checked ? '☑' : '☐'}</Text>
                 <Text style={[styles.name, s.checked && { textDecorationLine: 'line-through' }]}>{s.name}</Text>
-                {SOURCE_LABEL[s.source] ? <Text style={styles.tag}>{SOURCE_LABEL[s.source]}</Text> : null}
+                {sizeTips.has(s.key) && !s.checked ? (
+                  <Text style={[styles.tag, { color: colors.primary }]}>{adviceTag(sizeTips.get(s.key)!)}</Text>
+                ) : SOURCE_LABEL[s.source] ? (
+                  <Text style={styles.tag}>{SOURCE_LABEL[s.source]}</Text>
+                ) : null}
               </Pressable>
             ))}
           </View>

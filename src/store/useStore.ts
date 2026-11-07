@@ -250,6 +250,10 @@ export const useStore = create<State>()(
             price: it.price !== undefined ? Math.round(it.price * (outcome === 'tossed' ? share : 1) * 100) / 100 : undefined,
             at: new Date().toISOString(),
             outcome,
+            key: it.key,
+            quantity: it.quantity,
+            unit: it.unit,
+            share: outcome === 'tossed' ? share : 0,
           };
           return {
             items: s.items.filter((i) => i.id !== id),
@@ -266,7 +270,13 @@ export const useStore = create<State>()(
         const priceOf = (name: string) => before.find((i) => i.name === name)?.price;
         set((s) => ({
           items: inventory,
-          log: [...usedUp.map((name) => ({ id: newId(), name, at, outcome: 'used' as const, price: priceOf(name) })), ...s.log].slice(0, 500),
+          log: [
+            ...usedUp.map((name) => {
+              const it = before.find((i) => i.name === name);
+              return { id: newId(), name, at, outcome: 'used' as const, price: priceOf(name), ...(it ? { key: it.key, quantity: it.quantity, unit: it.unit, share: 0 } : {}) };
+            }),
+            ...s.log,
+          ].slice(0, 500),
         }));
         return usedUp;
       },
