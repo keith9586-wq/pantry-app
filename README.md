@@ -20,6 +20,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Accounts.** Everyone starts with an anonymous account. In Settings you can save it with your email (a 6-digit code) and sign in on a new phone to get your household back.
 - **Weekly meal planner.** Add a recipe to any of the next 7 days from its page, then see the week on the Recipes tab under "This week" with one list of what you still need to buy. Long-press a planned meal to remove it.
 - **Price tracking.** Every scanned receipt records what you paid per unit. When you check a new receipt, each line says whether it's more or less than usual. The Savings tab lists price jumps and what you usually pay, and the shopping list shows a rough total from your last prices.
+- **Diet and allergies.** In Settings, pick diets (vegetarian, vegan, pescatarian, gluten-free, dairy-free), allergies and foods you don't eat. Recipes that don't fit are hidden, optional ingredients that don't fit are marked "leave out", and a recipe page warns you if it conflicts. Free for everyone.
 - **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Plus ($4.99/month) unlocks unlimited scans, recipes, the weekly meal planner, the self-filling list and the Savings tab with price tracking. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
 
 Without a backend configured, the app runs fully on the phone and the sharing screen explains what to set up.
@@ -95,5 +96,6 @@ supabase/         backend functions and database schema
 
 ## Next steps
 
-1. Diet and allergy profiles (v1.1).
-2. Share price history across a household.
+1. Share price history and diet profiles across a household.
+2. Read allergens from Open Food Facts when a barcode is scanned.
+3. More recipes, or let people add their own.

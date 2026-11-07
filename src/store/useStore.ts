@@ -19,6 +19,7 @@ import type {
 import { uuid } from '../lib/id';
 import { prunePlan, type MealPlan } from '../lib/planner';
 import { recordPrices, type PriceHistory } from '../lib/prices';
+import { EMPTY_PROFILE, type DietProfile } from '../lib/diet';
 
 export const newId = uuid;
 
@@ -45,6 +46,9 @@ interface Snapshot {
 
 interface State extends Snapshot {
   priceHistory: PriceHistory;
+  /** This phone's diet, allergies and dislikes. Not shared with the household. */
+  dietProfile: DietProfile;
+  setDietProfile: (p: DietProfile) => void;
   /** Dates of receipt photo scans, for the free plan's monthly limit. */
   scanLog: string[];
   remindersOn: boolean;
@@ -118,6 +122,8 @@ export const useStore = create<State>()(
       shopping: [],
       purchaseCounts: {},
       priceHistory: {},
+      dietProfile: EMPTY_PROFILE,
+      setDietProfile: (p) => set({ dietProfile: p }),
       log: [],
       lastAction: null,
       householdId: null,
@@ -283,6 +289,7 @@ export const useStore = create<State>()(
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,
+        dietProfile: s.dietProfile,
       }),
     },
   ),

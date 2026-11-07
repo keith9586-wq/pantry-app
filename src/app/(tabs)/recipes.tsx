@@ -9,11 +9,17 @@ import { can } from '../../lib/plans';
 import { colors, space } from '../../components/theme';
 import { RECIPES } from '../../data/recipes';
 import { rankRecipes } from '../../lib/recipes';
+import { isEmptyProfile, recipeFit } from '../../lib/diet';
 import { useStore } from '../../store/useStore';
 
 export default function RecipesScreen() {
   const items = useStore((s) => s.items);
-  const matches = useMemo(() => rankRecipes(items, RECIPES), [items]);
+  const profile = useStore((s) => s.dietProfile);
+  const { matches, hidden } = useMemo(() => {
+    const ranked = rankRecipes(items, RECIPES).map((m) => ({ ...m, fit: recipeFit(m.recipe, profile) }));
+    const ok = ranked.filter((m) => m.fit.blocking.length === 0);
+    return { matches: ok, hidden: ranked.length - ok.length };
+  }, [items, profile]);
   const plan = usePlan();
   const [view, setView] = useState<'ideas' | 'week'>('ideas');
 
@@ -46,12 +52,29 @@ export default function RecipesScreen() {
     );
   }
 
+  const hiddenNote =
+    hidden > 0 ? (
+      <Pressable onPress={() => router.push('/diet')}>
+        <Text style={styles.hidden}>
+          {hidden} {hidden === 1 ? 'recipe is' : 'recipes are'} hidden because {hidden === 1 ? "it doesn't" : "they don't"} fit your diet. Edit
+        </Text>
+      </Pressable>
+    ) : null;
+
   if (matches.length === 0) {
     return (
-      <Empty
-        title="No matches yet"
-        body="Add groceries and recipes appear here, ranked by what you already have and what needs using up first."
-      />
+      <View style={{ flex: 1 }}>
+        {tabs}
+        <Empty
+          title="No matches yet"
+          body={
+            hidden > 0
+              ? 'None of the recipes that use your groceries fit your diet yet. Add more groceries for more ideas.'
+              : 'Add groceries and recipes appear here, ranked by what you already have and what needs using up first.'
+          }
+        />
+        {hiddenNote}
+      </View>
     );
   }
 
@@ -80,8 +103,12 @@ export default function RecipesScreen() {
                   .map((x) => x.name)
                   .join(', ')}`}
           </Text>
+          {m.fit.skip.length > 0 && !isEmptyProfile(profile) && (
+            <Text style={styles.skip}>Leave out: {m.fit.skip.map((c) => c.ingredient.name).join(', ')}</Text>
+          )}
         </Pressable>
       ))}
+      {hiddenNote}
     </ScrollView>
   );
 }
@@ -100,5 +127,7 @@ const styles = StyleSheet.create({
   time: { fontSize: 13, color: colors.muted },
   rescue: { alignSelf: 'flex-start', backgroundColor: colors.warnSoft, borderRadius: 999, paddingHorizontal: space(2.5), paddingVertical: space(1), marginTop: space(2) },
   rescueText: { fontSize: 12, fontWeight: '600', color: colors.warn },
+  skip: { fontSize: 13, color: colors.warn, marginTop: space(1) },
+  hidden: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: space(2), padding: space(4) },
   meta: { fontSize: 14, color: colors.muted, marginTop: space(2), lineHeight: 19 },
 });

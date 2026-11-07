@@ -5,6 +5,7 @@ import { Button, Card, Input, SectionTitle } from '../components/ui';
 import { colors, space } from '../components/theme';
 import { initBilling, usePlan } from '../billing/billing';
 import { PLAN_COPY } from '../lib/plans';
+import { isEmptyProfile } from '../lib/diet';
 import { enableReminders } from '../notify/reminders';
 import { useStore } from '../store/useStore';
 import { confirmSaveEmail, confirmSignIn, getAccount, startSaveEmail, startSignIn } from '../sync/account';
@@ -26,6 +27,7 @@ export default function SettingsScreen() {
   const householdId = useStore((s) => s.householdId);
   const setHousehold = useStore((s) => s.setHousehold);
   const remindersOn = useStore((s) => s.remindersOn);
+  const dietProfile = useStore((s) => s.dietProfile);
   const setRemindersOn = useStore((s) => s.setRemindersOn);
   const [account, setAccount] = useState<{ email: string | null; anonymous: boolean } | null>(null);
   const [flow, setFlow] = useState<Flow>(null);
@@ -78,6 +80,13 @@ export default function SettingsScreen() {
 
       <SectionTitle>Household</SectionTitle>
       <Row label={householdId ? 'Shared kitchen' : 'Just me'} value={householdId ? 'Manage' : 'Set up'} onPress={() => router.push('/household')} />
+
+      <SectionTitle>Diet and allergies</SectionTitle>
+      <Row
+        label={isEmptyProfile(dietProfile) ? 'No restrictions' : `${dietProfile.diets.length + dietProfile.allergies.length + dietProfile.dislikes.length} set`}
+        value={isEmptyProfile(dietProfile) ? 'Set up' : 'Edit'}
+        onPress={() => router.push('/diet')}
+      />
 
       <SectionTitle>Reminders</SectionTitle>
       <View style={styles.row}>
