@@ -2,6 +2,9 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Empty } from '../../components/ui';
+import { Locked } from '../../components/Locked';
+import { usePlan } from '../../billing/billing';
+import { can } from '../../lib/plans';
 import { colors, space } from '../../components/theme';
 import { RECIPES } from '../../data/recipes';
 import { rankRecipes } from '../../lib/recipes';
@@ -10,6 +13,16 @@ import { useStore } from '../../store/useStore';
 export default function RecipesScreen() {
   const items = useStore((s) => s.items);
   const matches = useMemo(() => rankRecipes(items, RECIPES), [items]);
+  const plan = usePlan();
+
+  if (!can(plan, 'recipes')) {
+    return (
+      <Locked
+        title="Cook from what you have"
+        body="See recipes ranked by what's already in your kitchen and what's about to expire, then deduct ingredients in one tap."
+      />
+    );
+  }
 
   if (matches.length === 0) {
     return (

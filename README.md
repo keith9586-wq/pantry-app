@@ -16,6 +16,8 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Household sharing.** Tap Household on the Kitchen tab to create a household or join one with an invite code. The kitchen, shopping list and history then sync across everyone's phones with live updates. People start with an anonymous account, so there's no sign-up form.
 - **Forwarded e-receipts.** Each household gets its own email address. Forwarded receipts are read on the server and wait in the Scan tab for a quick check before they're added.
 
+- **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Plus ($4.99/month) unlocks unlimited scans, recipes, the self-filling list and the Savings tab. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
+
 Without a backend configured, the app runs fully on the phone and the sharing screen explains what to set up.
 
 ## Run it
@@ -38,6 +40,8 @@ Photo receipt scanning needs the server function below. Without it, the Scan tab
 | `functions/parse-receipt` | Takes a receipt photo or text, asks Claude to read it, returns clean line items as JSON. |
 | `functions/inbound-email` | Webhook for forwarded e-receipt emails. Each household gets an address like `r-<code>@receipts.<your-domain>`; parsed items wait in `pending_receipts` for someone to confirm. |
 | `migrations/0001_households.sql` | Households, members, invite codes, shared items and shopping list, history for the money view, row-level security so people only see their own household. |
+| `functions/revenuecat-webhook` | Marks a household as Family while its owner's subscription is active, so every member gets Family features. |
+| `migrations/0003_family_plan.sql` | `family_until` on households, and a 6-person limit on joining. |
 | `migrations/0002_sync.sql` | Phone-generated ids for history events, leaving a household, and `updated_at` / `updated_by` stamps. |
 
 Setup:
@@ -57,6 +61,15 @@ For email forwarding, set `EXPO_PUBLIC_RECEIPT_EMAIL_DOMAIN` in `.env` to the do
 `https://<project>.supabase.co/functions/v1/inbound-email?secret=<INBOUND_EMAIL_SECRET>`.
 
 The Anthropic API key only ever lives in Supabase secrets, never in the app.
+
+### Subscriptions (RevenueCat)
+
+1. Create products in App Store Connect and Google Play (monthly Plus and Family, each with a 7-day free trial).
+2. In RevenueCat, add both apps, create entitlements named exactly `plus` and `family`, attach the products, and put a Plus and a Family package in the current offering (product ids containing "plus" / "family").
+3. Put the public SDK keys in `.env` as `EXPO_PUBLIC_REVENUECAT_IOS_KEY` and `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`.
+4. Deploy `revenuecat-webhook`, set `supabase secrets set REVENUECAT_WEBHOOK_AUTH=<random string>`, and add the webhook in RevenueCat with that value as the Authorization header.
+
+In-app purchases need a development build (`npx expo run:ios` / `run:android` or EAS Build); Expo Go can't make real purchases.
 
 ## Checks
 
@@ -79,5 +92,5 @@ supabase/         backend functions and database schema
 ## Next steps
 
 1. Upgrade anonymous accounts to email sign-in so a household survives a lost phone.
-2. Subscriptions (Plus and Family) with a free trial.
-3. Push notifications for food about to expire.
+2. Push notifications for food about to expire.
+3. Meal planner and price tracking (v1.1).

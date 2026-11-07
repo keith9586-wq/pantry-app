@@ -37,3 +37,22 @@ test('productFromOpenFoodFacts maps known products and rejects unknown ones', ()
   assert.equal(productFromOpenFoodFacts({ status: 0 }), null);
   assert.equal(productFromOpenFoodFacts({ status: 1, product: { brands: 'X' } }), null);
 });
+
+import { bestPlan, can, planFromEntitlements, planFromHousehold, scansLeft } from '../plans';
+
+test('plans gate features and count free scans per month', () => {
+  assert.equal(can('free', 'recipes'), false);
+  assert.equal(can('plus', 'recipes'), true);
+  assert.equal(can('plus', 'createHousehold'), false);
+  assert.equal(can('family', 'createHousehold'), true);
+  assert.equal(planFromEntitlements(['plus', 'family']), 'family');
+  assert.equal(planFromEntitlements([]), 'free');
+  assert.equal(bestPlan('free', 'family', 'plus'), 'family');
+  assert.equal(planFromHousehold('2026-12-01T00:00:00Z', NOW), 'family');
+  assert.equal(planFromHousehold('2026-11-01T00:00:00Z', NOW), 'free');
+  assert.equal(planFromHousehold(null, NOW), 'free');
+  const log = [at(10, 1), at(10, 2), at(9, 30)];
+  assert.equal(scansLeft('free', log, NOW), 3);
+  assert.equal(scansLeft('plus', log, NOW), Infinity);
+  assert.equal(scansLeft('free', [at(10, 1), at(10, 2), at(10, 3), at(10, 4), at(10, 5), at(10, 6)], NOW), 0);
+});

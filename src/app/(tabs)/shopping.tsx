@@ -6,6 +6,8 @@ import { colors, space } from '../../components/theme';
 import { CATEGORY_LABEL } from '../../lib/normalize';
 import { groupByAisle } from '../../lib/shopping';
 import { useStore } from '../../store/useStore';
+import { usePlan } from '../../billing/billing';
+import { can } from '../../lib/plans';
 
 const SOURCE_LABEL = { auto: 'running low', recipe: 'for a recipe', manual: '' } as const;
 
@@ -17,12 +19,13 @@ export default function ShoppingScreen() {
   const refresh = useStore((s) => s.refreshSuggestions);
   const stockChecked = useStore((s) => s.stockChecked);
   const [draft, setDraft] = useState('');
+  const autoList = can(usePlan(), 'autoList');
 
   // Staples you buy often are added automatically whenever the list is opened.
   useFocusEffect(
     useCallback(() => {
-      refresh();
-    }, [refresh]),
+      if (autoList) refresh();
+    }, [refresh, autoList]),
   );
 
   const groups = groupByAisle(shopping);
@@ -53,7 +56,14 @@ export default function ShoppingScreen() {
       </View>
 
       {groups.length === 0 ? (
-        <Empty title="Nothing to buy" body="Things you buy regularly show up here on their own when they run low." />
+        <Empty
+          title="Nothing to buy"
+          body={
+            autoList
+              ? 'Things you buy regularly show up here on their own when they run low.'
+              : 'Add items above. With Plus, things you buy regularly add themselves when they run low.'
+          }
+        />
       ) : (
         groups.map((g) => (
           <View key={g.category}>

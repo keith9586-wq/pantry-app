@@ -6,6 +6,9 @@ import { useStore } from '../store/useStore';
 import { supabase } from '../sync/client';
 import { createHousehold, getHousehold, inboxAddress, joinHousehold, leaveHousehold, type Household } from '../sync/household';
 import { useSyncStatus } from '../sync/useHouseholdSync';
+import { router } from 'expo-router';
+import { usePlan } from '../billing/billing';
+import { can } from '../lib/plans';
 
 const STATUS_LABEL = { idle: 'Not syncing', syncing: 'Syncing…', live: 'Up to date', offline: 'Offline, will retry' } as const;
 
@@ -17,6 +20,7 @@ export default function HouseholdScreen() {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const canCreate = can(usePlan(), 'createHousehold');
 
   useEffect(() => {
     if (!householdId || !supabase) return;
@@ -56,7 +60,12 @@ export default function HouseholdScreen() {
         </Text>
         <SectionTitle>Start a household</SectionTitle>
         <Input value={name} onChangeText={setName} placeholder="Name, e.g. The Smiths" />
-        <Button title="Create household" onPress={() => run(() => createHousehold(name))} disabled={busy} style={{ marginTop: space(2) }} />
+        <Button
+          title={canCreate ? 'Create household' : 'Create household (Family plan)'}
+          onPress={() => (canCreate ? run(() => createHousehold(name)) : router.push('/paywall'))}
+          disabled={busy}
+          style={{ marginTop: space(2) }}
+        />
         <SectionTitle>Or join one</SectionTitle>
         <Input value={code} onChangeText={setCode} placeholder="Invite code" autoCapitalize="none" autoCorrect={false} />
         <Button
@@ -67,7 +76,9 @@ export default function HouseholdScreen() {
           style={{ marginTop: space(2) }}
         />
         {busy && <ActivityIndicator color={colors.primary} style={{ marginTop: space(4) }} />}
-        <Text style={[styles.note, { marginTop: space(6) }]}>What's already on this phone is added to the household when you join.</Text>
+        <Text style={[styles.note, { marginTop: space(6) }]}>
+          What's already on this phone is added to the household when you join. Joining is free; the person who started the household covers everyone.
+        </Text>
       </ScrollView>
     );
   }
