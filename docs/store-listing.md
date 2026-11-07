@@ -76,7 +76,7 @@ The app works without signing in. To test subscriptions, use a sandbox account; 
 
 ## Before you submit
 
-- [ ] Fill in the brackets in `docs/privacy-policy.md` and host it (a GitHub Pages site or Notion page works). Put the URL in both stores and in the description.
-- [ ] Choose the bundle id and package name, for example `com.yourname.pantry`, and add `ios.bundleIdentifier` and `android.package` to `app.json`. You can't change these after the first upload.
+- [ ] Fill in the contact email and Supabase region in `docs/privacy-policy.md`, then host it (a GitHub Pages site or Notion page works). Put the URL in both stores and in the description.
+- [x] Bundle id and package name are `com.keith9586.pantry` in `app.json`. These can't change after the first upload.
 - [ ] Create the Plus and Family subscriptions in both stores (see README, Subscriptions).
 - [ ] Add a support URL or email (both stores require one).

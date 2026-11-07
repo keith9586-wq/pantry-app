@@ -1,8 +1,8 @@
 # Pantry privacy policy
 
-_Last updated: [DATE]. Replace the bracketed parts before publishing._
+_Last updated: November 7, 2026._
 
-Pantry ("the app") is made by [YOUR NAME OR COMPANY]. This policy explains what the app collects, why, and what you can do about it. Questions: [CONTACT EMAIL].
+Pantry ("the app") is made by Keith. This policy explains what the app collects, why, and what you can do about it. Questions: [CONTACT EMAIL].
 
 ## The short version
 
@@ -34,11 +34,11 @@ No location, contacts, advertising id, browsing history, or analytics or trackin
 
 ## Who else handles your data
 
-- **Supabase** stores household data and accounts. [REGION]
+- **Supabase** stores household data and accounts in [REGION: the Supabase project region, e.g. US East].
 - **Anthropic** reads receipt photos and text.
 - **RevenueCat**, **Apple** and **Google** handle subscriptions.
 - **Open Food Facts** gets barcode numbers.
-- **[EMAIL PROVIDER, e.g. Postmark]** receives forwarded e-receipts.
+- **Postmark** receives forwarded e-receipts.
 
 Each one handles data only to provide its part of the service.
 
