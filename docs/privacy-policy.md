@@ -2,7 +2,7 @@
 
 _Last updated: November 7, 2026._
 
-Pantry ("the app") is made by Keith. This policy explains what the app collects, why, and what you can do about it. Questions: [CONTACT EMAIL].
+Pantry ("the app") is made by Keith. This policy explains what the app collects, why, and what you can do about it. Questions: keith9586@gmail.com.
 
 ## The short version
 
@@ -46,7 +46,7 @@ Each one handles data only to provide its part of the service.
 
 - Data on your phone is deleted when you delete the app.
 - Leaving a household (Settings, then Household) removes you and your diet from it. The household's shared kitchen stays with the remaining members.
-- To delete your account and everything tied to it, email [CONTACT EMAIL] from the address on your account, or from the app's support link. We'll do it within 30 days.
+- To delete your account and everything tied to it, email keith9586@gmail.com from the address on your account, or from the app's support link. We'll do it within 30 days.
 
 ## Children
 
