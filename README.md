@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Recall alerts.** Twice a day the app downloads recent FDA (openFDA) and USDA FSIS food recalls and matches them on the phone against what's in your kitchen. When an item has a brand (from the receipt or barcode), the recall has to name that brand; without one, a recall for the same food shows as "check the label". Matches show on the Kitchen tab and, with reminders on, as a notification.
 - **Receipt scanning.** Take a photo of a receipt (or paste e-receipt text). Store shorthand like `GV WHL MLK 1G` becomes "Whole Milk", and each item lands in your kitchen.
 - **Predicted use-by dates.** Every item gets an estimated date from what it is and where it's kept. Moving milk to the freezer re-estimates it.
 - **Barcode scanning.** Scan a package to add it, looked up in [Open Food Facts](https://world.openfoodfacts.org).
