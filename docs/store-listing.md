@@ -67,7 +67,7 @@ Use the "Try it with sample groceries" option on the welcome screen, so every sc
 
 - Data collected: email address (optional), user ids, purchase history, other user-generated content (photos of receipts are processed but not stored).
 - Shared with third parties: no. Processors like Supabase, Anthropic and RevenueCat count as service providers, not sharing.
-- Encrypted in transit: yes. Users can request deletion: yes, by email ([CONTACT EMAIL]).
+- Encrypted in transit: yes. Users can request deletion: yes, by email (the contact address in `docs/privacy-policy.md`).
 - Photos: "Processed ephemerally" for receipt photos.
 
 ## Review notes for Apple
@@ -76,7 +76,8 @@ The app works without signing in. To test subscriptions, use a sandbox account; 
 
 ## Before you submit
 
-- [ ] Fill in the contact email and Supabase region in `docs/privacy-policy.md`, then host it (a GitHub Pages site or Notion page works). Put the URL in both stores and in the description.
+- [ ] Replace the temporary contact email. It's in one place, the **Contact** line at the top of `docs/privacy-policy.md`. Use the same address as the support email in both stores.
+- [ ] Fill in the Supabase region in `docs/privacy-policy.md`, then host it (a GitHub Pages site or Notion page works). Put the URL in both stores and in the description.
 - [x] Bundle id and package name are `com.keith9586.pantry` in `app.json`. These can't change after the first upload.
 - [ ] Create the Plus and Family subscriptions in both stores (see README, Subscriptions).
 - [ ] Add a support URL or email (both stores require one).
