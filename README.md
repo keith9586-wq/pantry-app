@@ -13,7 +13,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Auto shopping list.** Things you've bought at least twice are added when they run out or run low, grouped by store aisle. Checked items can be put straight into the kitchen.
 - **Money saved and wasted.** The Savings tab shows what you ate vs. threw out this month, your waste rate, and the items you throw out most.
 
-- **Household sharing.** Tap Household on the Kitchen tab to create a household or join one with an invite code. The kitchen, shopping list and history then sync across everyone's phones with live updates. People start with an anonymous account, so there's no sign-up form.
+- **Household sharing.** Tap Household on the Kitchen tab to create a household or join one with an invite code. The kitchen, shopping list, history, your own recipes and price history then sync across everyone's phones with live updates. Everyone's diets and allergies are shared too, so the Recipes tab can show only recipes that fit all of you (tap the chip to switch to just yours). People start with an anonymous account, so there's no sign-up form.
 - **Forwarded e-receipts.** Each household gets its own email address. Forwarded receipts are read on the server and wait in the Scan tab for a quick check before they're added.
 
 - **Use-by reminders.** One notification the morning before food expires, grouped per day. Tapping it opens recipes that use those items. You can turn it on from the Kitchen tab or in Settings.
@@ -47,6 +47,7 @@ Photo receipt scanning needs the server function below. Without it, the Scan tab
 | `functions/inbound-email` | Webhook for forwarded e-receipt emails. Each household gets an address like `r-<code>@receipts.<your-domain>`; parsed items wait in `pending_receipts` for someone to confirm. |
 | `migrations/0001_households.sql` | Households, members, invite codes, shared items and shopping list, history for the money view, row-level security so people only see their own household. |
 | `functions/revenuecat-webhook` | Marks a household as Family while its owner's subscription is active, so every member gets Family features. |
+| `migrations/0004_shared_extras.sql` | `recipes`, `prices` and `member_diets` tables. Members read everyone's diet but can only write their own. |
 | `migrations/0003_family_plan.sql` | `family_until` on households, and a 6-person limit on joining. |
 | `migrations/0002_sync.sql` | Phone-generated ids for history events, leaving a household, and `updated_at` / `updated_by` stamps. |
 
@@ -97,5 +98,4 @@ supabase/         backend functions and database schema
 
 ## Next steps
 
-1. Share price history and diet profiles across a household.
-2. Share your own recipes with your household, and import a recipe from a web link.
+1. Import a recipe from a web link.
