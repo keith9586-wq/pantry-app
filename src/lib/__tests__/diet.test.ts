@@ -54,3 +54,32 @@ test('every built-in recipe gets sensible tags', () => {
   assert.ok(veg.length > 0 && veg.length < RECIPES.length);
   assert.ok(gf.length > 0 && gf.length < RECIPES.length);
 });
+
+import { factsFromOpenFoodFacts } from '../barcode';
+import { productWarnings } from '../diet';
+
+test('scanned products are checked against allergies and diets', () => {
+  const facts = factsFromOpenFoodFacts({
+    status: 1,
+    product: {
+      product_name: 'Chocolate Chip Cookies',
+      allergens_tags: ['en:gluten', 'en:milk', 'en:eggs'],
+      traces_tags: ['en:nuts', 'en:milk'],
+      ingredients_analysis_tags: ['en:non-vegan', 'en:vegetarian'],
+      labels_tags: [],
+    },
+  });
+  assert.deepEqual(facts, { allergens: ['gluten', 'dairy', 'eggs'], traces: ['treeNuts'], vegan: false, vegetarian: true, glutenFree: false });
+  const w = productWarnings('Chocolate Chip Cookies', facts, { diets: ['vegan', 'vegetarian'], allergies: ['treeNuts', 'eggs'], dislikes: [] });
+  assert.deepEqual(w, [
+    { text: 'Contains eggs', level: 'danger' },
+    { text: 'May contain tree nuts', level: 'caution' },
+    { text: 'Not vegan', level: 'caution' },
+  ]);
+  // No label data: the name still catches obvious ones.
+  const empty = factsFromOpenFoodFacts({ status: 1, product: { product_name: 'Peanut Butter' } });
+  assert.deepEqual(productWarnings('Peanut Butter', empty, { diets: [], allergies: ['peanuts'], dislikes: [] }), [
+    { text: 'Contains peanuts', level: 'danger' },
+  ]);
+  assert.deepEqual(productWarnings('Bread', factsFromOpenFoodFacts({ product: { labels_tags: ['en:gluten-free'], allergens_tags: [] } }), { diets: ['glutenFree'], allergies: [], dislikes: [] }), []);
+});
