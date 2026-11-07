@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router/tabs';
-import { Text, type ColorValue } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, Text, type ColorValue } from 'react-native';
 import { colors } from '../../components/theme';
 
 // Simple text glyphs keep the app dependency-free; swap for an icon set later.
@@ -16,7 +17,18 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Kitchen', tabBarIcon: glyph('▤') }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Kitchen',
+          tabBarIcon: glyph('▤'),
+          headerRight: () => (
+            <Pressable onPress={() => router.push('/household')} hitSlop={10} style={{ marginRight: 16 }}>
+              <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Household</Text>
+            </Pressable>
+          ),
+        }}
+      />
       <Tabs.Screen name="scan" options={{ title: 'Scan receipt', tabBarLabel: 'Scan', tabBarIcon: glyph('⌗') }} />
       <Tabs.Screen name="recipes" options={{ title: 'Cook from what you have', tabBarLabel: 'Recipes', tabBarIcon: glyph('◉') }} />
       <Tabs.Screen name="shopping" options={{ title: 'Shopping list', tabBarLabel: 'List', tabBarIcon: glyph('☑') }} />

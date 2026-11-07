@@ -69,6 +69,8 @@ export interface ShoppingItem {
 }
 
 export interface WasteEntry {
+  /** Missing on entries logged before household sync existed. */
+  id?: string;
   name: string;
   price?: number;
   at: string;

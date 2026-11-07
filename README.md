@@ -13,7 +13,10 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Auto shopping list.** Things you've bought at least twice are added when they run out or run low, grouped by store aisle. Checked items can be put straight into the kitchen.
 - **Money saved and wasted.** The Savings tab shows what you ate vs. threw out this month, your waste rate, and the items you throw out most.
 
-Data is stored on the phone for now. The household sharing backend is in `supabase/` and will be wired into the app next (see "Next steps").
+- **Household sharing.** Tap Household on the Kitchen tab to create a household or join one with an invite code. The kitchen, shopping list and history then sync across everyone's phones with live updates. People start with an anonymous account, so there's no sign-up form.
+- **Forwarded e-receipts.** Each household gets its own email address. Forwarded receipts are read on the server and wait in the Scan tab for a quick check before they're added.
+
+Without a backend configured, the app runs fully on the phone and the sharing screen explains what to set up.
 
 ## Run it
 
@@ -35,6 +38,7 @@ Photo receipt scanning needs the server function below. Without it, the Scan tab
 | `functions/parse-receipt` | Takes a receipt photo or text, asks Claude to read it, returns clean line items as JSON. |
 | `functions/inbound-email` | Webhook for forwarded e-receipt emails. Each household gets an address like `r-<code>@receipts.<your-domain>`; parsed items wait in `pending_receipts` for someone to confirm. |
 | `migrations/0001_households.sql` | Households, members, invite codes, shared items and shopping list, history for the money view, row-level security so people only see their own household. |
+| `migrations/0002_sync.sql` | Phone-generated ids for history events, leaving a household, and `updated_at` / `updated_by` stamps. |
 
 Setup:
 
@@ -44,10 +48,12 @@ supabase db push
 supabase secrets set ANTHROPIC_API_KEY=<key> INBOUND_EMAIL_SECRET=<random string>
 supabase functions deploy parse-receipt
 supabase functions deploy inbound-email
-cp .env.example .env   # then fill in the function URL and anon key
+cp .env.example .env   # then fill in EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY
 ```
 
-For email forwarding, point an inbound-email provider (for example Postmark inbound) at
+In the Supabase dashboard, turn on **Anonymous sign-ins** (Authentication → Providers) so household sharing works without a sign-up form.
+
+For email forwarding, set `EXPO_PUBLIC_RECEIPT_EMAIL_DOMAIN` in `.env` to the domain your provider receives mail for, and point the provider (for example Postmark inbound) at
 `https://<project>.supabase.co/functions/v1/inbound-email?secret=<INBOUND_EMAIL_SECRET>`.
 
 The Anthropic API key only ever lives in Supabase secrets, never in the app.
@@ -65,12 +71,13 @@ npm run typecheck
 src/app/          screens (Expo Router): Kitchen, Scan, Recipes, List, Savings, item editor, barcode, add
 src/lib/          plain TypeScript logic with tests in src/lib/__tests__
 src/store/        app state (zustand, saved on the device)
+src/sync/         Supabase client, household create/join, two-way sync engine, emailed receipts
 src/data/         starter recipes
 supabase/         backend functions and database schema
 ```
 
 ## Next steps
 
-1. Sign-in and household sync: create or join a household with an invite code, then sync items, the shopping list and history through Supabase with live updates.
-2. Show pending emailed receipts in the Scan tab for one-tap confirmation.
-3. Subscriptions (Plus and Family) with a free trial.
+1. Upgrade anonymous accounts to email sign-in so a household survives a lost phone.
+2. Subscriptions (Plus and Family) with a free trial.
+3. Push notifications for food about to expire.
