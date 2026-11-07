@@ -161,3 +161,13 @@ export function productWarnings(name: string, facts: ProductFacts, profile: Diet
   // Allergies first.
   return out.sort((x, y) => (x.level === y.level ? 0 : x.level === 'danger' ? -1 : 1));
 }
+
+/** One profile that fits everyone: every diet, allergy and dislike from each person. */
+export function combineProfiles(profiles: DietProfile[]): DietProfile {
+  const uniq = <T,>(xs: T[]) => [...new Set(xs)];
+  return {
+    diets: uniq(profiles.flatMap((p) => p.diets)),
+    allergies: uniq(profiles.flatMap((p) => p.allergies)),
+    dislikes: uniq(profiles.flatMap((p) => p.dislikes)),
+  };
+}

@@ -8,7 +8,7 @@ import { upcomingDays } from '../../lib/planner';
 import { colors, space } from '../../components/theme';
 import { findItem } from '../../lib/recipes';
 import { recipeFit } from '../../lib/diet';
-import { useRecipes, useStore } from '../../store/useStore';
+import { useActiveProfile, useRecipes, useStore } from '../../store/useStore';
 import { isCustom } from '../../lib/customRecipe';
 
 export default function RecipeScreen() {
@@ -20,7 +20,7 @@ export default function RecipeScreen() {
   const addShopping = useStore((s) => s.addShopping);
   const addToPlan = useStore((s) => s.addToPlan);
   const canPlan = can(usePlan(), 'mealPlanner');
-  const profile = useStore((s) => s.dietProfile);
+  const profile = useActiveProfile();
   const [picking, setPicking] = useState(false);
 
   const rows = useMemo(
