@@ -19,6 +19,7 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { addPurchaseDate, forecastRunOuts, dueWithin, type PurchaseCounts } from '../lib/runout';
 import { makeLeftover } from '../lib/leftovers';
 import { prunePlan, type MealPlan } from '../lib/planner';
 import { recordPrices, type PriceHistory } from '../lib/prices';
@@ -26,7 +27,7 @@ import { combineProfiles, EMPTY_PROFILE, isEmptyProfile, type DietProfile } from
 
 export const newId = uuid;
 
-type PurchaseCounts = Record<string, { name: string; count: number; category: Category }>;
+
 
 export interface NewItemInput {
   name: string;
@@ -202,7 +203,12 @@ export const useStore = create<State>()(
           const counts = { ...s.purchaseCounts };
           for (const it of opts?.stockTake ? [] : built) {
             const prev = counts[it.key];
-            counts[it.key] = { name: prev?.name ?? it.name, category: it.category, count: (prev?.count ?? 0) + 1 };
+            counts[it.key] = {
+              name: prev?.name ?? it.name,
+              category: it.category,
+              count: (prev?.count ?? 0) + 1,
+              dates: addPurchaseDate(prev?.dates, purchasedAt),
+            };
           }
           // Buying something ticks it off the shopping list.
           const bought = new Set(built.map((b) => b.key));
@@ -314,8 +320,12 @@ export const useStore = create<State>()(
       },
 
       refreshSuggestions: () => {
-        const { items, purchaseCounts, shopping } = get();
-        const sugg = autoSuggestions(items, purchaseCounts, shopping);
+        const { items, purchaseCounts, shopping, priceHistory } = get();
+        const low = autoSuggestions(items, purchaseCounts, shopping);
+        // Staples that usually run out within a day go on the list before they're gone.
+        const seen = new Set([...shopping.map((s) => s.key), ...low.map((l) => l.key)]);
+        const due = dueWithin(forecastRunOuts(purchaseCounts, priceHistory, items), 1).filter((r) => !seen.has(r.key));
+        const sugg = [...low, ...due];
         set({
           shopping: [
             ...shopping,
