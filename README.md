@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Cart health (Plus).** Savings shows what share of the month's shopping went to fruit and vegetables, sweets and sugary drinks, and highly processed food (by spend when receipts have prices), the change from last month, and anything that didn't fit the diet settings. No food diary needed.
 - **Away mode.** Settings → Going away: pick when you leave and for how long. The app lists what would spoil (freeze it in one tap, or eat it first, with dinners added to the plan on Plus), keeps fresh food off the self-filling list from the day before you leave, and pauses use-by reminders until you're back.
 - **Budget week (Plus).** "Feed 4 people for $60": plans 3, 5 or 7 dinners that use what's on hand first (especially food about to expire), then the cheapest extras, priced from your own receipts or typical store prices. One tap fills the meal plan and the shopping list.
 - **Buy-size coach (Plus).** From what gets finished and how much of it is thrown out, Savings suggests the size you actually eat ("Try 1.25 lb instead of 2 lb") with the money it would save, and the shopping list tags those items.

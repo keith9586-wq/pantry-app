@@ -19,6 +19,7 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { MAX_PURCHASES, type Purchase } from '../lib/cartHealth';
 import { PERISHABLE, restockPaused, type AwayTrip } from '../lib/away';
 import { matchRecalls, type Recall, type RecallMatch } from '../lib/recalls';
 import { addPurchaseDate, forecastRunOuts, dueWithin, type PurchaseCounts } from '../lib/runout';
@@ -50,6 +51,7 @@ interface Snapshot {
   purchaseCounts: PurchaseCounts;
   /** What you paid for things, from receipts. Optional so older snapshots still restore. */
   priceHistory?: PriceHistory;
+  purchases?: Purchase[];
 }
 
 interface State extends Snapshot {
@@ -72,6 +74,8 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** Everything bought, newest first, for the monthly cart health view. */
+  purchases: Purchase[];
   /** A trip away: fresh food isn't restocked and reminders pause. */
   away: AwayTrip | null;
   setAway: (trip: AwayTrip | null) => void;
@@ -159,8 +163,8 @@ export const useStore = create<State>()(
     (set, get) => {
       /** Records the state before a change so the user can undo it. */
       const remember = (label: string) => {
-        const { items, shopping, log, purchaseCounts, priceHistory } = get();
-        set({ lastAction: { label, before: { items, shopping, log, purchaseCounts, priceHistory } } });
+        const { items, shopping, log, purchaseCounts, priceHistory, purchases } = get();
+        set({ lastAction: { label, before: { items, shopping, log, purchaseCounts, priceHistory, purchases } } });
       };
       return {
       items: [],
@@ -187,6 +191,7 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      purchases: [],
       away: null,
       setAway: (away) => set({ away }),
       recalls: [],
@@ -240,6 +245,10 @@ export const useStore = create<State>()(
           return {
             items: [...s.items, ...built],
             purchaseCounts: counts,
+            purchases: [
+              ...(opts?.stockTake ? [] : built).map((b) => ({ at: purchasedAt.toISOString(), key: b.key, name: b.name, category: b.category, price: b.price })),
+              ...s.purchases,
+            ].slice(0, MAX_PURCHASES),
             priceHistory: opts?.stockTake ? s.priceHistory : recordPrices(s.priceHistory, built, purchasedAt),
             shopping: s.shopping.filter((sh) => !bought.has(sh.key)),
           };
@@ -396,6 +405,7 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        purchases: s.purchases,
         away: s.away,
         recalls: s.recalls,
         recallsFetchedAt: s.recallsFetchedAt,
