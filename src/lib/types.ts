@@ -34,6 +34,10 @@ export interface InventoryItem {
   price?: number;
   /** Brand from the receipt or barcode, used to match food recalls. */
   brand?: string;
+  /** When someone last confirmed it is still there (pantry check). */
+  checkedAt?: string;
+  /** A cooked dish kept in portions, not a bought ingredient. */
+  leftover?: boolean;
 }
 
 /** One line read from a receipt, before the user confirms it. */
