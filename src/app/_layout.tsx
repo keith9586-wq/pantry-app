@@ -4,10 +4,12 @@ import { colors } from '../components/theme';
 import { UndoBar } from '../components/UndoBar';
 import { useHouseholdSync } from '../sync/useHouseholdSync';
 import { useExpiryReminders } from '../notify/reminders';
+import { useRecallWatch } from '../notify/recalls';
 
 export default function RootLayout() {
   useHouseholdSync();
   useExpiryReminders();
+  useRecallWatch();
   return (
     <>
       <StatusBar style="dark" />
@@ -25,6 +27,9 @@ export default function RootLayout() {
         <Stack.Screen name="recipe-edit" options={{ presentation: 'modal', title: 'New recipe' }} />
         <Stack.Screen name="item/[id]" options={{ title: 'Item' }} />
         <Stack.Screen name="budget" options={{ presentation: 'modal', title: 'Budget week' }} />
+        <Stack.Screen name="recalls" options={{ title: 'Food recalls' }} />
+        <Stack.Screen name="check" options={{ presentation: 'modal', title: 'Quick check' }} />
+        <Stack.Screen name="shelf-scan" options={{ presentation: 'modal', title: 'Sweep your shelves' }} />
         <Stack.Screen name="barcode" options={{ presentation: 'modal', title: 'Scan a barcode' }} />
         <Stack.Screen name="household" options={{ title: 'Household' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
