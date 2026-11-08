@@ -32,6 +32,10 @@ export interface InventoryItem {
   expiresAt: string | null; // ISO timestamp
   expirySource: 'predicted' | 'user';
   price?: number;
+  /** When someone last confirmed it is still there (pantry check). */
+  checkedAt?: string;
+  /** A cooked dish kept in portions, not a bought ingredient. */
+  leftover?: boolean;
 }
 
 /** One line read from a receipt, before the user confirms it. */
