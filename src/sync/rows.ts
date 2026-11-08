@@ -17,6 +17,7 @@ export interface ItemRow {
   expires_at: string | null;
   expiry_source: string;
   price: number | null;
+  brand?: string | null;
   checked_at?: string | null;
   leftover?: boolean;
 }
@@ -54,6 +55,7 @@ export const itemToRow = (it: InventoryItem, householdId: string): ItemRow => ({
   expires_at: it.expiresAt,
   expiry_source: it.expirySource,
   price: it.price ?? null,
+  brand: it.brand ?? null,
   checked_at: it.checkedAt ?? null,
   leftover: !!it.leftover,
 });
@@ -71,6 +73,7 @@ export const rowToItem = (r: ItemRow): InventoryItem => ({
   expiresAt: r.expires_at,
   expirySource: r.expiry_source === 'user' ? 'user' : 'predicted',
   price: r.price === null ? undefined : Number(r.price),
+  ...(r.brand ? { brand: r.brand } : {}),
   ...(r.checked_at ? { checkedAt: r.checked_at } : {}),
   ...(r.leftover ? { leftover: true } : {}),
 });

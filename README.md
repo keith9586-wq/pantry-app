@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Recall alerts.** Twice a day the app downloads recent FDA (openFDA) and USDA FSIS food recalls and matches them on the phone against what's in your kitchen. When an item has a brand (from the receipt or barcode), the recall has to name that brand; without one, a recall for the same food shows as "check the label". Matches show on the Kitchen tab and, with reminders on, as a notification.
 - **Run-out prediction (Plus).** The app learns how often you buy each staple ("eggs every 9 days") and puts it on the list the day before it usually runs out. A "Running out in the next few days" section previews what's next, and with reminders on there's a nudge at 6 pm the evening before your usual shop day.
 - **10-second pantry check.** Each item has a confidence score that falls with age, low fill and a passed date. Once a day the Kitchen tab offers a short stack of cards for only the least-sure items ("Still have spinach?"): swipe right if it's there, left if it's gone, or tap how much is left.
 - **Leftovers.** "I made this" can save portions of the dish as their own item ("Chili (Tuesday)", eat within 4 days). Leftovers sit at the top of the Kitchen tab and can also be added by hand.

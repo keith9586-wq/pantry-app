@@ -95,9 +95,10 @@ export function useExpiryReminders() {
   }, [remindersOn]);
 
   useEffect(() => {
+    // Each notification names the screen it's about; expiry reminders open recipes.
     const sub = Notifications.addNotificationResponseReceivedListener((r) => {
       const screen = r.notification.request.content.data?.screen;
-      router.navigate(screen === '/shopping' ? '/shopping' : '/recipes');
+      router.navigate((typeof screen === 'string' ? screen : '/recipes') as '/recipes');
     });
     return () => sub.remove();
   }, []);

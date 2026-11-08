@@ -29,6 +29,8 @@ Pantry ("the app") is made by Keith. This policy explains what the app collects,
 
 **Barcodes.** When you scan a barcode, the app looks up the number on Open Food Facts, a public product database. Only the barcode number is sent.
 
+**Food recalls.** The app downloads the public lists of food recalls from the US FDA and USDA and compares them with your kitchen on your phone. Nothing about you or your food is sent to them.
+
 **Purchases.** Subscriptions go through Apple or Google and are managed by RevenueCat. We receive whether your subscription is active and the anonymous account id it belongs to. We never see your card details.
 
 **Notifications.** Use-by reminders are scheduled on your phone. Nothing about them is sent to us.

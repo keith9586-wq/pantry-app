@@ -5,7 +5,7 @@ import { Button, Chip, Empty, SectionTitle } from '../../components/ui';
 import { colors, space, urgencyColor } from '../../components/theme';
 import { daysLeft, expiryLabel, urgency } from '../../lib/expiry';
 import type { InventoryItem, StorageSpot } from '../../lib/types';
-import { moneyStats, useStore } from '../../store/useStore';
+import { moneyStats, useRecallMatches, useStore } from '../../store/useStore';
 import { enableReminders } from '../../notify/reminders';
 import { checkedToday, pickChecks } from '../../lib/confidence';
 import { leftoversFirst } from '../../lib/leftovers';
@@ -91,6 +91,7 @@ export default function KitchenScreen() {
     };
   }, [items, spot]);
 
+  const recallMatches = useRecallMatches();
   const stats = moneyStats(log);
   const remindersOn = useStore((s) => s.remindersOn);
   const [hideReminderCard, setHideReminderCard] = useState(false);
@@ -113,6 +114,16 @@ export default function KitchenScreen() {
           <Text style={styles.statLabel}>wasted this month</Text>
         </View>
       </View>
+
+      {recallMatches.length > 0 && (
+        <Pressable style={styles.recall} onPress={() => router.push('/recalls')} accessibilityRole="button">
+          <Text style={styles.recallTitle}>
+            {recallMatches[0].strength === 'brand' ? `Recall: your ${recallMatches[0].item.name}` : `Possible recall: ${recallMatches[0].item.name}`}
+            {recallMatches.length > 1 ? ` and ${recallMatches.length - 1} more` : ''}
+          </Text>
+          <Text style={styles.recallBody}>Tap to see the notice and check your package.</Text>
+        </Pressable>
+      )}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: space(4) }}>
         {SPOTS.map((s) => (
@@ -185,6 +196,9 @@ export default function KitchenScreen() {
 }
 
 const styles = StyleSheet.create({
+  recall: { backgroundColor: colors.dangerSoft, borderRadius: 14, padding: space(4), marginTop: space(4) },
+  recallTitle: { fontSize: 16, fontWeight: '700', color: colors.danger },
+  recallBody: { fontSize: 14, color: colors.text, marginTop: 2 },
   stats: { flexDirection: 'row', gap: space(2) },
   stat: { flex: 1, backgroundColor: colors.card, borderRadius: 14, padding: space(3), borderWidth: 1, borderColor: colors.border },
   statNum: { fontSize: 22, fontWeight: '700', color: colors.text },

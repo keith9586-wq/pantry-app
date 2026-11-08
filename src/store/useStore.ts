@@ -19,6 +19,7 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { matchRecalls, type Recall, type RecallMatch } from '../lib/recalls';
 import { addPurchaseDate, forecastRunOuts, dueWithin, type PurchaseCounts } from '../lib/runout';
 import { makeLeftover } from '../lib/leftovers';
 import { prunePlan, type MealPlan } from '../lib/planner';
@@ -37,6 +38,7 @@ export interface NewItemInput {
   storage?: StorageSpot;
   price?: number;
   expiresAt?: string | null;
+  brand?: string;
   fill?: FillLevel;
 }
 
@@ -69,6 +71,15 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** Recent FDA and USDA food recalls, refreshed about twice a day. */
+  recalls: Recall[];
+  recallsFetchedAt: string | null;
+  setRecalls: (r: Recall[]) => void;
+  /** Recall matches (recall id | item id) the user said aren't theirs, or already notified. */
+  recallsDismissed: string[];
+  recallsNotified: string[];
+  dismissRecall: (key: string) => void;
+  markRecallsNotified: (keys: string[]) => void;
   /** Dates of shelf sweeps, for the monthly sweep allowance. */
   sweepLog: string[];
   recordSweep: () => void;
@@ -135,6 +146,7 @@ function buildItem(input: NewItemInput, purchasedAt: Date): InventoryItem {
     expiresAt: userDate ? input.expiresAt! : predictExpiry(key, category, storage, purchasedAt).toISOString(),
     expirySource: userDate ? 'user' : 'predicted',
     price: input.price,
+    ...(input.brand ? { brand: input.brand } : {}),
   };
 }
 
@@ -171,6 +183,13 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      recalls: [],
+      recallsFetchedAt: null,
+      setRecalls: (recalls) => set({ recalls: recalls.slice(0, 1500), recallsFetchedAt: new Date().toISOString() }),
+      recallsDismissed: [],
+      recallsNotified: [],
+      dismissRecall: (key) => set((s) => ({ recallsDismissed: [key, ...s.recallsDismissed].slice(0, 300) })),
+      markRecallsNotified: (keys) => set((s) => ({ recallsNotified: [...keys, ...s.recallsNotified].slice(0, 300) })),
       sweepLog: [],
       remindersOn: false,
       mealPlan: {},
@@ -223,7 +242,7 @@ export const useStore = create<State>()(
 
       addParsed: (lines, purchasedAt) =>
         get().addItems(
-          lines.map((l) => ({ name: l.name, quantity: l.quantity, unit: l.unit, category: l.category, price: l.price })),
+          lines.map((l) => ({ name: l.name, quantity: l.quantity, unit: l.unit, category: l.category, price: l.price, brand: l.brand })),
           purchasedAt,
         ),
 
@@ -359,6 +378,10 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        recalls: s.recalls,
+        recallsFetchedAt: s.recallsFetchedAt,
+        recallsDismissed: s.recallsDismissed,
+        recallsNotified: s.recallsNotified,
         lastCheckAt: s.lastCheckAt,
         sweepLog: s.sweepLog,
         remindersOn: s.remindersOn,
@@ -406,4 +429,12 @@ export function useHydrated(): boolean {
     return unsub;
   }, [done]);
   return done;
+}
+
+/** Recalls that may cover food on hand, strongest first. */
+export function useRecallMatches(): RecallMatch[] {
+  const recalls = useStore((s) => s.recalls);
+  const items = useStore((s) => s.items);
+  const dismissed = useStore((s) => s.recallsDismissed);
+  return useMemo(() => matchRecalls(recalls, items, dismissed), [recalls, items, dismissed]);
 }
