@@ -128,7 +128,8 @@ export function sanitizeParsedLines(data: unknown): ParsedLine[] {
       ? (r.category as Category)
       : guessCategory(name);
     const price = typeof r.price === 'number' && r.price >= 0 ? r.price : undefined;
-    out.push({ name, quantity, unit, category, price });
+    const brand = typeof r.brand === 'string' && r.brand.trim() ? r.brand.trim().slice(0, 40) : undefined;
+    out.push({ name, quantity, unit, category, price, ...(brand ? { brand } : {}) });
   }
   return out;
 }

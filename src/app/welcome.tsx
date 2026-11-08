@@ -45,13 +45,14 @@ export default function WelcomeScreen() {
 
   const next = () => setStep(ORDER[ORDER.indexOf(step) + 1]);
 
-  function finish(then: 'scan' | 'sample' | 'empty') {
+  function finish(then: 'scan' | 'sweep' | 'sample' | 'empty') {
     setOnboarded();
     if (then === 'sample') {
       addItems(sampleInputs(new Date()));
       clearUndo();
     }
     router.replace(then === 'scan' ? '/scan' : '/');
+    if (then === 'sweep') router.push('/shelf-scan');
     if (shared) router.push('/household');
   }
 
@@ -123,8 +124,11 @@ export default function WelcomeScreen() {
         {step === 'start' && (
           <>
             <Text style={styles.title}>Fill your kitchen</Text>
-            <Text style={styles.lead}>The fastest way is your last grocery receipt. Paper or a photo of the screen both work.</Text>
-            <Button title="Scan a receipt" onPress={() => finish('scan')} style={{ marginTop: space(4) }} />
+            <Text style={styles.lead}>
+              Sweep your phone slowly across the fridge and pantry, or scan your last grocery receipt. You check everything before it's added.
+            </Text>
+            <Button title="Sweep my shelves" onPress={() => finish('sweep')} style={{ marginTop: space(4) }} />
+            <Button kind="secondary" title="Scan a receipt" onPress={() => finish('scan')} style={{ marginTop: space(2) }} />
             <Button kind="secondary" title="Try it with sample groceries" onPress={() => finish('sample')} style={{ marginTop: space(2) }} />
             <Button kind="secondary" title="Start with an empty kitchen" onPress={() => finish('empty')} style={{ marginTop: space(2) }} />
             <Text style={styles.note}>Sample groceries are normal items. Tick them off or throw them out whenever you like.</Text>

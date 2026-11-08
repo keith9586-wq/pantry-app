@@ -32,6 +32,12 @@ export interface InventoryItem {
   expiresAt: string | null; // ISO timestamp
   expirySource: 'predicted' | 'user';
   price?: number;
+  /** Brand from the receipt or barcode, used to match food recalls. */
+  brand?: string;
+  /** When someone last confirmed it is still there (pantry check). */
+  checkedAt?: string;
+  /** A cooked dish kept in portions, not a bought ingredient. */
+  leftover?: boolean;
 }
 
 /** One line read from a receipt, before the user confirms it. */
@@ -41,6 +47,7 @@ export interface ParsedLine {
   unit: string;
   category: Category;
   price?: number;
+  brand?: string;
 }
 
 export interface RecipeIngredient {
