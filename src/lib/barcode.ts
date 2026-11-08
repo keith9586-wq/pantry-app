@@ -21,6 +21,7 @@ export function productFromOpenFoodFacts(json: unknown): ParsedLine | null {
     quantity: 1,
     unit: 'each',
     category,
+    ...(brand ? { brand } : {}),
   };
 }
 
