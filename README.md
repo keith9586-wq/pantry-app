@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Budget week (Plus).** "Feed 4 people for $60": plans 3, 5 or 7 dinners that use what's on hand first (especially food about to expire), then the cheapest extras, priced from your own receipts or typical store prices. One tap fills the meal plan and the shopping list.
 - **Buy-size coach (Plus).** From what gets finished and how much of it is thrown out, Savings suggests the size you actually eat ("Try 1.25 lb instead of 2 lb") with the money it would save, and the shopping list tags those items.
 - **Recall alerts.** Twice a day the app downloads recent FDA (openFDA) and USDA FSIS food recalls and matches them on the phone against what's in your kitchen. When an item has a brand (from the receipt or barcode), the recall has to name that brand; without one, a recall for the same food shows as "check the label". Matches show on the Kitchen tab and, with reminders on, as a notification.
 - **Run-out prediction (Plus).** The app learns how often you buy each staple ("eggs every 9 days") and puts it on the list the day before it usually runs out. A "Running out in the next few days" section previews what's next, and with reminders on there's a nudge at 6 pm the evening before your usual shop day.
