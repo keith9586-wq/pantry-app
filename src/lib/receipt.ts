@@ -128,7 +128,8 @@ export function sanitizeParsedLines(data: unknown): ParsedLine[] {
       ? (r.category as Category)
       : guessCategory(name);
     const price = typeof r.price === 'number' && r.price >= 0 ? r.price : undefined;
-    out.push({ name, quantity, unit, category, price });
+    const brand = typeof r.brand === 'string' && r.brand.trim() ? r.brand.trim().slice(0, 40) : undefined;
+    out.push({ name, quantity, unit, category, price, ...(brand ? { brand } : {}) });
   }
   return out;
 }
@@ -137,7 +138,17 @@ export function sanitizeParsedLines(data: unknown): ParsedLine[] {
  * Sends a receipt photo to the parse-receipt server function, which calls Claude.
  * The API key lives on the server; the app only knows the function URL.
  */
-export async function parseReceiptImage(base64Jpeg: string, endpoint: string, authToken?: string): Promise<ParsedLine[]> {
+/** The store name the receipt reader saw, if any. */
+export function parseReceiptStore(data: unknown): string | null {
+  const s = (data as { store?: unknown })?.store;
+  return typeof s === 'string' && s.trim() ? s.trim().slice(0, 80) : null;
+}
+
+export async function parseReceiptImage(
+  base64Jpeg: string,
+  endpoint: string,
+  authToken?: string,
+): Promise<{ lines: ParsedLine[]; store: string | null }> {
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -150,5 +161,6 @@ export async function parseReceiptImage(base64Jpeg: string, endpoint: string, au
     const detail = await res.text().catch(() => '');
     throw new Error(`Receipt service returned ${res.status}${detail ? `: ${detail}` : ''}`);
   }
-  return sanitizeParsedLines(await res.json());
+  const data = await res.json();
+  return { lines: sanitizeParsedLines(data), store: parseReceiptStore(data) };
 }

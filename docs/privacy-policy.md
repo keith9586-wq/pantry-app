@@ -11,7 +11,7 @@ Pantry ("the app") is made by Keith. This policy explains what the app collects,
 
 - Your kitchen lives on your phone. It only goes to our servers if you share a household or save your account.
 - We don't sell your data, show ads, or track you across other apps.
-- Receipt photos are read and then discarded. We don't keep them.
+- Receipt photos and shelf photos are read and then discarded. We don't keep them.
 
 ## What we collect and why
 
@@ -23,11 +23,17 @@ Pantry ("the app") is made by Keith. This policy explains what the app collects,
 
 **Receipt photos and text.** When you scan a receipt, the photo or text goes to our server, which asks Anthropic's Claude model to read the items and prices. We don't store the photo. Anthropic processes it under its commercial terms, doesn't use it to train its models, and deletes it after a limited retention period. Only the item list comes back to your phone.
 
+**Shelf photos.** When you sweep your camera across a fridge or cupboard, the app takes a few still photos (at most eight per sweep), shrinks them and sends them to our server, which asks Claude to list the food it can see. They are handled the same way as receipt photos: not stored by us, and only the item list comes back.
+
 **Forwarded e-receipt emails.** If you forward a receipt to your household's address, we read the email's text in the same way. We keep the sender, subject and the list of items until someone in your household confirms or dismisses it. We don't keep the email itself.
 
 **Barcodes.** When you scan a barcode, the app looks up the number on Open Food Facts, a public product database. Only the barcode number is sent.
 
 **Food swap (only if you use it).** If you post food for neighbors, people signed in to Pantry in the same area (first three ZIP digits) see your first name, the food, the date it's good until, the pickup area you type and your note. The contact details you enter are shown only to the person you choose to give it to. If you ask for someone's food, they see your first name and message. You can take a post down at any time. Sending food to a friend uses your phone's own share sheet and doesn't go through Pantry.
+
+**Prices near you (off unless you turn it on).** If you turn on anonymous price sharing, each receipt you confirm sends the store chain name, the first three digits of the ZIP code you enter, and the price per unit of each item. Your name, household and the time of day are not sent. Nobody can read individual reports; the app only shows a store's price once at least three different people nearby have reported it. Turning sharing off stops new reports.
+
+**Food recalls.** The app downloads the public lists of food recalls from the US FDA and USDA and compares them with your kitchen on your phone. Nothing about you or your food is sent to them.
 
 **Purchases.** Subscriptions go through Apple or Google and are managed by RevenueCat. We receive whether your subscription is active and the anonymous account id it belongs to. We never see your card details.
 
@@ -40,7 +46,7 @@ No location, contacts, advertising id, browsing history, or analytics or trackin
 ## Who else handles your data
 
 - **Supabase** stores household data and accounts in [REGION: the Supabase project region, e.g. US East].
-- **Anthropic** reads receipt photos and text.
+- **Anthropic** reads receipt photos, receipt text and shelf photos.
 - **RevenueCat**, **Apple** and **Google** handle subscriptions.
 - **Open Food Facts** gets barcode numbers.
 - **Postmark** receives forwarded e-receipts.

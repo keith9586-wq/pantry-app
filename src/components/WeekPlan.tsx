@@ -21,6 +21,7 @@ export function WeekPlan() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: space(4), paddingBottom: space(16) }}>
+      <Button kind="secondary" title="Plan a week on a budget" onPress={() => router.push('/budget')} style={{ marginBottom: space(3) }} />
       {!planned && (
         <Text style={styles.empty}>
           Nothing planned yet. Open a recipe in Ideas and tap "Add to plan". Recipes that use food about to expire are at the top.

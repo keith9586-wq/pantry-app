@@ -14,6 +14,8 @@ import { lineChange } from '../../lib/prices';
 import { PriceTag } from '../../components/PriceTag';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../sync/client';
 import { listPending, markHandled, type PendingReceipt } from '../../sync/pending';
+import { reportsFromReceipt } from '../../lib/priceMap';
+import { sharePrices } from '../../sync/priceMap';
 
 // Set these in .env (see README). Without them the app falls back to pasted text.
 const API_URL =
@@ -45,6 +47,8 @@ export default function ScanScreen() {
   const left = scansLeft(plan, scanLog);
   const [pending, setPending] = useState<PendingReceipt[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [store, setStore] = useState<string | null>(null);
+  const priceSharing = useStore((s) => s.priceSharing);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,6 +58,7 @@ export default function ScanScreen() {
   );
 
   function openPending(p: PendingReceipt) {
+    setStore(null);
     setPendingId(p.id);
     setRows(p.items.map((l) => ({ ...l, keep: true })));
   }
@@ -90,7 +95,8 @@ export default function ScanScreen() {
     if (result.canceled || !result.assets[0]?.base64) return;
     setBusy(true);
     try {
-      const lines = await parseReceiptImage(result.assets[0].base64, API_URL, API_KEY);
+      const { lines, store } = await parseReceiptImage(result.assets[0].base64, API_URL, API_KEY);
+      setStore(store);
       if (lines.length > 0) recordScan();
       if (lines.length === 0) Alert.alert('No items found', 'Try a flatter, well-lit photo of the full receipt.');
       setRows(lines.map((l) => ({ ...l, keep: true })));
@@ -102,6 +108,7 @@ export default function ScanScreen() {
   }
 
   function fromText(t: string) {
+    setStore(null);
     const lines = parseReceiptText(t);
     if (lines.length === 0) {
       Alert.alert('No items found', 'Each item line should end with its price, like "MILK 1G  3.48".');
@@ -113,6 +120,9 @@ export default function ScanScreen() {
   function confirm() {
     const kept = rows.filter((r) => r.keep);
     addParsed(kept);
+    // Opted in: share prices from this receipt with people nearby, anonymously.
+    if (priceSharing.on && store) sharePrices(reportsFromReceipt(kept, store, priceSharing.zip)).catch(() => {});
+    setStore(null);
     if (pendingId) {
       dismissPending(pendingId);
       setPendingId(null);

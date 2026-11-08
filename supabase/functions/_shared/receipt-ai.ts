@@ -9,20 +9,22 @@ const CATEGORIES = [
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['items'],
+  required: ['items', 'store'],
   properties: {
+    store: { type: ['string', 'null'], description: 'Store chain name as printed at the top, e.g. "Aldi", without store number or address; null if not shown' },
     items: {
       type: 'array',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['name', 'quantity', 'unit', 'category', 'price'],
+        required: ['name', 'quantity', 'unit', 'category', 'price', 'brand'],
         properties: {
           name: { type: 'string', description: 'Plain product name a shopper would say, e.g. "Whole milk", no brand codes' },
           quantity: { type: 'number' },
           unit: { type: 'string', description: 'each, lb, oz, kg, gal, pack' },
           category: { type: 'string', enum: CATEGORIES },
           price: { type: ['number', 'null'], description: 'Line total paid after discounts, null if unreadable' },
+          brand: { type: ['string', 'null'], description: 'Brand as printed, expanded (e.g. "Great Value"), null for store produce or when unclear. Used to match food recalls.' },
         },
       },
     },
@@ -31,6 +33,7 @@ const SCHEMA = {
 
 const SYSTEM = `You read grocery receipts and return the food and household grocery items bought.
 Expand store abbreviations into plain names (e.g. "GV WHL MLK 1G" is "Whole milk", 1 gal).
+Keep the brand out of the name and put it in brand instead ("GV" is "Great Value"); use null when no brand is printed.
 Skip totals, tax, payment lines, coupons, bag fees, deposits and anything that is not a product.
 Apply line discounts to the item they belong to. When a weight is printed, use it as the quantity with its unit.
 If the image or text is not a receipt, return an empty items list.`;
@@ -42,7 +45,7 @@ export interface ReceiptInput {
   text?: string;
 }
 
-export async function extractReceiptItems(input: ReceiptInput): Promise<{ items: unknown[] }> {
+export async function extractReceiptItems(input: ReceiptInput): Promise<{ items: unknown[]; store?: string | null }> {
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];
   if (input.image) {
     content.push({ type: 'image', source: { type: 'base64', media_type: input.image.mediaType, data: input.image.data } });

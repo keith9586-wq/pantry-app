@@ -65,10 +65,11 @@ Use the "Try it with sample groceries" option on the welcome screen, so every sc
 
 ## Google Play data safety answers
 
-- Data collected: email address (optional), user ids, purchase history, other user-generated content (photos of receipts are processed but not stored).
+- Data collected: email address (optional), user ids, purchase history, other user-generated content (photos of receipts and shelves are processed but not stored).
 - Shared with third parties: no. Processors like Supabase, Anthropic and RevenueCat count as service providers, not sharing.
+- Optional price sharing: aggregated, anonymous prices (store chain, ZIP3, price per unit) are shown to other users only once 3+ people report them. Declare under "Purchase history" as optional, not linked to identity.
 - Encrypted in transit: yes. Users can request deletion: yes, by email (the contact address in `docs/privacy-policy.md`).
-- Photos: "Processed ephemerally" for receipt photos.
+- Photos: "Processed ephemerally" for receipt and shelf photos.
 
 ## Review notes for Apple
 

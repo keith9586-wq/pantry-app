@@ -19,13 +19,18 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { MAX_PURCHASES, type Purchase } from '../lib/cartHealth';
+import { PERISHABLE, restockPaused, type AwayTrip } from '../lib/away';
+import { matchRecalls, type Recall, type RecallMatch } from '../lib/recalls';
+import { addPurchaseDate, forecastRunOuts, dueWithin, type PurchaseCounts } from '../lib/runout';
+import { makeLeftover } from '../lib/leftovers';
 import { prunePlan, type MealPlan } from '../lib/planner';
 import { recordPrices, type PriceHistory } from '../lib/prices';
 import { combineProfiles, EMPTY_PROFILE, isEmptyProfile, type DietProfile } from '../lib/diet';
 
 export const newId = uuid;
 
-type PurchaseCounts = Record<string, { name: string; count: number; category: Category }>;
+
 
 export interface NewItemInput {
   name: string;
@@ -35,6 +40,8 @@ export interface NewItemInput {
   storage?: StorageSpot;
   price?: number;
   expiresAt?: string | null;
+  brand?: string;
+  fill?: FillLevel;
 }
 
 interface Snapshot {
@@ -44,6 +51,7 @@ interface Snapshot {
   purchaseCounts: PurchaseCounts;
   /** What you paid for things, from receipts. Optional so older snapshots still restore. */
   priceHistory?: PriceHistory;
+  purchases?: Purchase[];
 }
 
 interface State extends Snapshot {
@@ -72,6 +80,26 @@ interface State extends Snapshot {
   /** Which kitchen item each of your nearby offers is, so handing it over can clear it. */
   offerItems: Record<string, string>;
   linkOffer: (offerId: string, itemId: string) => void;
+  /** Opt-in anonymous price sharing for the local price map. */
+  priceSharing: { on: boolean; zip: string };
+  setPriceSharing: (p: { on: boolean; zip: string }) => void;
+  /** Everything bought, newest first, for the monthly cart health view. */
+  purchases: Purchase[];
+  /** A trip away: fresh food isn't restocked and reminders pause. */
+  away: AwayTrip | null;
+  setAway: (trip: AwayTrip | null) => void;
+  /** Recent FDA and USDA food recalls, refreshed about twice a day. */
+  recalls: Recall[];
+  recallsFetchedAt: string | null;
+  setRecalls: (r: Recall[]) => void;
+  /** Recall matches (recall id | item id) the user said aren't theirs, or already notified. */
+  recallsDismissed: string[];
+  recallsNotified: string[];
+  dismissRecall: (key: string) => void;
+  markRecallsNotified: (keys: string[]) => void;
+  /** Dates of shelf sweeps, for the monthly sweep allowance. */
+  sweepLog: string[];
+  recordSweep: () => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
   setHousehold: (id: string | null) => void;
@@ -89,14 +117,22 @@ interface State extends Snapshot {
   undo: () => void;
   clearUndo: () => void;
 
-  addItems: (inputs: NewItemInput[], purchasedAt?: Date) => void;
+  /** stockTake: items already at home (shelf sweep), so they don't count as purchases. */
+  addItems: (inputs: NewItemInput[], purchasedAt?: Date, opts?: { stockTake?: boolean }) => void;
   addParsed: (lines: ParsedLine[], purchasedAt?: Date) => void;
   updateItem: (id: string, patch: Partial<InventoryItem>) => void;
   cycleFill: (id: string) => void;
+  /** Pantry check: it's still there, with this much left. */
+  confirmItem: (id: string, fill: FillLevel) => void;
+  /** When the daily pantry check was last finished. */
+  lastCheckAt: string | null;
+  finishCheck: () => void;
+  addLeftover: (title: string, portions: number) => void;
   /** Logs part of an item as used, e.g. 2 of 12 eggs. */
   useSome: (id: string, amount: number) => void;
   finishItem: (id: string, outcome: 'used' | 'tossed') => void;
-  cook: (recipe: Recipe) => string[];
+  /** Deducts ingredients; leftovers > 0 also adds the dish as portions to eat by 4 days. */
+  cook: (recipe: Recipe, leftovers?: number) => string[];
 
   addShopping: (name: string, source?: ShoppingItem['source']) => void;
   toggleShopping: (id: string) => void;
@@ -122,11 +158,12 @@ function buildItem(input: NewItemInput, purchasedAt: Date): InventoryItem {
     storage,
     quantity: input.quantity ?? 1,
     unit: input.unit ?? 'each',
-    fill: 'full',
+    fill: input.fill ?? 'full',
     addedAt: purchasedAt.toISOString(),
     expiresAt: userDate ? input.expiresAt! : predictExpiry(key, category, storage, purchasedAt).toISOString(),
     expirySource: userDate ? 'user' : 'predicted',
     price: input.price,
+    ...(input.brand ? { brand: input.brand } : {}),
   };
 }
 
@@ -135,8 +172,8 @@ export const useStore = create<State>()(
     (set, get) => {
       /** Records the state before a change so the user can undo it. */
       const remember = (label: string) => {
-        const { items, shopping, log, purchaseCounts, priceHistory } = get();
-        set({ lastAction: { label, before: { items, shopping, log, purchaseCounts, priceHistory } } });
+        const { items, shopping, log, purchaseCounts, priceHistory, purchases } = get();
+        set({ lastAction: { label, before: { items, shopping, log, purchaseCounts, priceHistory, purchases } } });
       };
       return {
       items: [],
@@ -167,6 +204,19 @@ export const useStore = create<State>()(
       setSwap: (swap) => set({ swap }),
       offerItems: {},
       linkOffer: (offerId, itemId) => set((s) => ({ offerItems: { ...s.offerItems, [offerId]: itemId } })),
+      priceSharing: { on: false, zip: '' },
+      setPriceSharing: (priceSharing) => set({ priceSharing }),
+      purchases: [],
+      away: null,
+      setAway: (away) => set({ away }),
+      recalls: [],
+      recallsFetchedAt: null,
+      setRecalls: (recalls) => set({ recalls: recalls.slice(0, 1500), recallsFetchedAt: new Date().toISOString() }),
+      recallsDismissed: [],
+      recallsNotified: [],
+      dismissRecall: (key) => set((s) => ({ recallsDismissed: [key, ...s.recallsDismissed].slice(0, 300) })),
+      markRecallsNotified: (keys) => set((s) => ({ recallsNotified: [...keys, ...s.recallsNotified].slice(0, 300) })),
+      sweepLog: [],
       remindersOn: false,
       mealPlan: {},
       addToPlan: (day, recipeId) =>
@@ -179,6 +229,7 @@ export const useStore = create<State>()(
         set((s) => ({ mealPlan: prunePlan({ ...s.mealPlan, [day]: (s.mealPlan[day] ?? []).filter((id) => id !== recipeId) }, new Date()) })),
       setRemindersOn: (on) => set({ remindersOn: on }),
       recordScan: () => set((s) => ({ scanLog: [new Date().toISOString(), ...s.scanLog].slice(0, 100) })),
+      recordSweep: () => set((s) => ({ sweepLog: [new Date().toISOString(), ...s.sweepLog].slice(0, 100) })),
 
       setHousehold: (id) => set(id ? { householdId: id } : { householdId: null, householdDiets: [] }),
       applyRemote: (data) => set({ ...data, lastAction: null }),
@@ -189,22 +240,31 @@ export const useStore = create<State>()(
       },
       clearUndo: () => set({ lastAction: null }),
 
-      addItems: (inputs, purchasedAt = new Date()) => {
+      addItems: (inputs, purchasedAt = new Date(), opts) => {
         const built = inputs.filter((i) => i.name.trim()).map((i) => buildItem(i, purchasedAt));
         if (built.length === 0) return;
         remember(built.length === 1 ? `Added ${built[0].name}` : `Added ${built.length} items`);
         set((s) => {
           const counts = { ...s.purchaseCounts };
-          for (const it of built) {
+          for (const it of opts?.stockTake ? [] : built) {
             const prev = counts[it.key];
-            counts[it.key] = { name: prev?.name ?? it.name, category: it.category, count: (prev?.count ?? 0) + 1 };
+            counts[it.key] = {
+              name: prev?.name ?? it.name,
+              category: it.category,
+              count: (prev?.count ?? 0) + 1,
+              dates: addPurchaseDate(prev?.dates, purchasedAt),
+            };
           }
           // Buying something ticks it off the shopping list.
           const bought = new Set(built.map((b) => b.key));
           return {
             items: [...s.items, ...built],
             purchaseCounts: counts,
-            priceHistory: recordPrices(s.priceHistory, built, purchasedAt),
+            purchases: [
+              ...(opts?.stockTake ? [] : built).map((b) => ({ at: purchasedAt.toISOString(), key: b.key, name: b.name, category: b.category, price: b.price })),
+              ...s.purchases,
+            ].slice(0, MAX_PURCHASES),
+            priceHistory: opts?.stockTake ? s.priceHistory : recordPrices(s.priceHistory, built, purchasedAt),
             shopping: s.shopping.filter((sh) => !bought.has(sh.key)),
           };
         });
@@ -212,7 +272,7 @@ export const useStore = create<State>()(
 
       addParsed: (lines, purchasedAt) =>
         get().addItems(
-          lines.map((l) => ({ name: l.name, quantity: l.quantity, unit: l.unit, category: l.category, price: l.price })),
+          lines.map((l) => ({ name: l.name, quantity: l.quantity, unit: l.unit, category: l.category, price: l.price, brand: l.brand })),
           purchasedAt,
         ),
 
@@ -260,6 +320,10 @@ export const useStore = create<State>()(
             price: it.price !== undefined ? Math.round(it.price * (outcome === 'tossed' ? share : 1) * 100) / 100 : undefined,
             at: new Date().toISOString(),
             outcome,
+            key: it.key,
+            quantity: it.quantity,
+            unit: it.unit,
+            share: outcome === 'tossed' ? share : 0,
           };
           return {
             items: s.items.filter((i) => i.id !== id),
@@ -268,15 +332,34 @@ export const useStore = create<State>()(
           };
         }),
 
-      cook: (recipe) => {
+      confirmItem: (id, fill) => {
+        const at = new Date().toISOString();
+        set((s) => ({ items: s.items.map((it) => (it.id === id ? { ...it, fill, checkedAt: at } : it)) }));
+      },
+      lastCheckAt: null,
+      finishCheck: () => set({ lastCheckAt: new Date().toISOString() }),
+      addLeftover: (title, portions) => {
+        if (!title.trim()) return;
+        remember(`Added leftover ${title.trim()}`);
+        set((s) => ({ items: [...s.items, makeLeftover(title, portions, new Date(), newId())] }));
+      },
+
+      cook: (recipe, leftovers = 0) => {
         const before = get().items;
         const { inventory, usedUp } = cookRecipe(before, recipe);
         remember(`Cooked ${recipe.title}`);
         const at = new Date().toISOString();
         const priceOf = (name: string) => before.find((i) => i.name === name)?.price;
+        const dish = leftovers > 0 ? [makeLeftover(recipe.title, leftovers, new Date(), newId())] : [];
         set((s) => ({
-          items: inventory,
-          log: [...usedUp.map((name) => ({ id: newId(), name, at, outcome: 'used' as const, price: priceOf(name) })), ...s.log].slice(0, 500),
+          items: [...inventory, ...dish],
+          log: [
+            ...usedUp.map((name) => {
+              const it = before.find((i) => i.name === name);
+              return { id: newId(), name, at, outcome: 'used' as const, price: priceOf(name), ...(it ? { key: it.key, quantity: it.quantity, unit: it.unit, share: 0 } : {}) };
+            }),
+            ...s.log,
+          ].slice(0, 500),
         }));
         return usedUp;
       },
@@ -296,8 +379,14 @@ export const useStore = create<State>()(
       },
 
       refreshSuggestions: () => {
-        const { items, purchaseCounts, shopping } = get();
-        const sugg = autoSuggestions(items, purchaseCounts, shopping);
+        const { items, purchaseCounts, shopping, priceHistory, away } = get();
+        const low = autoSuggestions(items, purchaseCounts, shopping);
+        // Staples that usually run out within a day go on the list before they're gone.
+        const seen = new Set([...shopping.map((s) => s.key), ...low.map((l) => l.key)]);
+        const due = dueWithin(forecastRunOuts(purchaseCounts, priceHistory, items), 1).filter((r) => !seen.has(r.key));
+        // No fresh food on the list right before or during a trip.
+        const paused = restockPaused(away);
+        const sugg = [...low, ...due].filter((g) => !paused || !PERISHABLE.includes(g.category));
         set({
           shopping: [
             ...shopping,
@@ -333,6 +422,15 @@ export const useStore = create<State>()(
         scanLog: s.scanLog,
         swap: s.swap,
         offerItems: s.offerItems,
+        priceSharing: s.priceSharing,
+        purchases: s.purchases,
+        away: s.away,
+        recalls: s.recalls,
+        recallsFetchedAt: s.recallsFetchedAt,
+        recallsDismissed: s.recallsDismissed,
+        recallsNotified: s.recallsNotified,
+        lastCheckAt: s.lastCheckAt,
+        sweepLog: s.sweepLog,
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,
@@ -378,4 +476,12 @@ export function useHydrated(): boolean {
     return unsub;
   }, [done]);
   return done;
+}
+
+/** Recalls that may cover food on hand, strongest first. */
+export function useRecallMatches(): RecallMatch[] {
+  const recalls = useStore((s) => s.recalls);
+  const items = useStore((s) => s.items);
+  const dismissed = useStore((s) => s.recallsDismissed);
+  return useMemo(() => matchRecalls(recalls, items, dismissed), [recalls, items, dismissed]);
 }
