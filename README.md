@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Give it away.** Any item can go to a friend through the phone's share sheet, or onto the neighbor food swap (Settings → Food swap nearby): neighbors in the same ZIP3 see a first name, the food and a rough pickup area, ask for it, and only the person the giver picks sees their contact. Raw meat, fish and leftovers are friends-only; two reports hide a post (migration `0009_surplus.sql`).
 - **Prices near you (opt-in, Plus to view).** People who turn on anonymous sharing in Settings send per-unit prices with the store chain and ZIP3 when they confirm a receipt. Savings shows "Eggs: $0.25 at Aldi near you, vs $0.40 you paid" from area medians. A price only appears once 3 different people have reported it (migration `0008_area_prices.sql`: raw reports can't be read, only the aggregated view).
 - **Cart health (Plus).** Savings shows what share of the month's shopping went to fruit and vegetables, sweets and sugary drinks, and highly processed food (by spend when receipts have prices), the change from last month, and anything that didn't fit the diet settings. No food diary needed.
 - **Away mode.** Settings → Going away: pick when you leave and for how long. The app lists what would spoil (freeze it in one tap, or eat it first, with dinners added to the plan on Plus), keeps fresh food off the self-filling list from the day before you leave, and pauses use-by reminders until you're back.

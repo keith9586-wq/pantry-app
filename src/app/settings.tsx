@@ -93,7 +93,10 @@ export default function SettingsScreen() {
 
       {supabase && (
         <>
-        <SectionTitle>Prices near you</SectionTitle>
+          <SectionTitle>Neighbors</SectionTitle>
+          <Row label="Food swap nearby" value="Open" onPress={() => router.push('/swap')} />
+
+          <SectionTitle>Prices near you</SectionTitle>
         <View style={styles.row}>
           <Text style={[styles.rowLabel, { flex: 1 }]}>Share what I pay, anonymously</Text>
           <Switch
@@ -121,6 +124,7 @@ export default function SettingsScreen() {
         )}
         </>
       )}
+
       <SectionTitle>Trips</SectionTitle>
       <Row label="Going away" value="Plan" onPress={() => router.push('/away')} />
 

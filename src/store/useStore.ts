@@ -74,6 +74,12 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** Food swap details, remembered between offers. Contact is only ever shown to the person you accept. */
+  swap: { name: string; zip: string; contact: string };
+  setSwap: (s: { name: string; zip: string; contact: string }) => void;
+  /** Which kitchen item each of your nearby offers is, so handing it over can clear it. */
+  offerItems: Record<string, string>;
+  linkOffer: (offerId: string, itemId: string) => void;
   /** Opt-in anonymous price sharing for the local price map. */
   priceSharing: { on: boolean; zip: string };
   setPriceSharing: (p: { on: boolean; zip: string }) => void;
@@ -194,6 +200,10 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      swap: { name: '', zip: '', contact: '' },
+      setSwap: (swap) => set({ swap }),
+      offerItems: {},
+      linkOffer: (offerId, itemId) => set((s) => ({ offerItems: { ...s.offerItems, [offerId]: itemId } })),
       priceSharing: { on: false, zip: '' },
       setPriceSharing: (priceSharing) => set({ priceSharing }),
       purchases: [],
@@ -410,6 +420,8 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        swap: s.swap,
+        offerItems: s.offerItems,
         priceSharing: s.priceSharing,
         purchases: s.purchases,
         away: s.away,
