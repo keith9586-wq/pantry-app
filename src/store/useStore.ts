@@ -36,6 +36,7 @@ export interface NewItemInput {
   storage?: StorageSpot;
   price?: number;
   expiresAt?: string | null;
+  fill?: FillLevel;
 }
 
 interface Snapshot {
@@ -67,6 +68,9 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** Dates of shelf sweeps, for the monthly sweep allowance. */
+  sweepLog: string[];
+  recordSweep: () => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
   setHousehold: (id: string | null) => void;
@@ -84,7 +88,8 @@ interface State extends Snapshot {
   undo: () => void;
   clearUndo: () => void;
 
-  addItems: (inputs: NewItemInput[], purchasedAt?: Date) => void;
+  /** stockTake: items already at home (shelf sweep), so they don't count as purchases. */
+  addItems: (inputs: NewItemInput[], purchasedAt?: Date, opts?: { stockTake?: boolean }) => void;
   addParsed: (lines: ParsedLine[], purchasedAt?: Date) => void;
   updateItem: (id: string, patch: Partial<InventoryItem>) => void;
   cycleFill: (id: string) => void;
@@ -124,7 +129,7 @@ function buildItem(input: NewItemInput, purchasedAt: Date): InventoryItem {
     storage,
     quantity: input.quantity ?? 1,
     unit: input.unit ?? 'each',
-    fill: 'full',
+    fill: input.fill ?? 'full',
     addedAt: purchasedAt.toISOString(),
     expiresAt: userDate ? input.expiresAt! : predictExpiry(key, category, storage, purchasedAt).toISOString(),
     expirySource: userDate ? 'user' : 'predicted',
@@ -165,6 +170,7 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      sweepLog: [],
       remindersOn: false,
       mealPlan: {},
       addToPlan: (day, recipeId) =>
@@ -177,6 +183,7 @@ export const useStore = create<State>()(
         set((s) => ({ mealPlan: prunePlan({ ...s.mealPlan, [day]: (s.mealPlan[day] ?? []).filter((id) => id !== recipeId) }, new Date()) })),
       setRemindersOn: (on) => set({ remindersOn: on }),
       recordScan: () => set((s) => ({ scanLog: [new Date().toISOString(), ...s.scanLog].slice(0, 100) })),
+      recordSweep: () => set((s) => ({ sweepLog: [new Date().toISOString(), ...s.sweepLog].slice(0, 100) })),
 
       setHousehold: (id) => set(id ? { householdId: id } : { householdId: null, householdDiets: [] }),
       applyRemote: (data) => set({ ...data, lastAction: null }),
@@ -187,13 +194,13 @@ export const useStore = create<State>()(
       },
       clearUndo: () => set({ lastAction: null }),
 
-      addItems: (inputs, purchasedAt = new Date()) => {
+      addItems: (inputs, purchasedAt = new Date(), opts) => {
         const built = inputs.filter((i) => i.name.trim()).map((i) => buildItem(i, purchasedAt));
         if (built.length === 0) return;
         remember(built.length === 1 ? `Added ${built[0].name}` : `Added ${built.length} items`);
         set((s) => {
           const counts = { ...s.purchaseCounts };
-          for (const it of built) {
+          for (const it of opts?.stockTake ? [] : built) {
             const prev = counts[it.key];
             counts[it.key] = { name: prev?.name ?? it.name, category: it.category, count: (prev?.count ?? 0) + 1 };
           }
@@ -202,7 +209,7 @@ export const useStore = create<State>()(
           return {
             items: [...s.items, ...built],
             purchaseCounts: counts,
-            priceHistory: recordPrices(s.priceHistory, built, purchasedAt),
+            priceHistory: opts?.stockTake ? s.priceHistory : recordPrices(s.priceHistory, built, purchasedAt),
             shopping: s.shopping.filter((sh) => !bought.has(sh.key)),
           };
         });
@@ -343,6 +350,7 @@ export const useStore = create<State>()(
         householdId: s.householdId,
         scanLog: s.scanLog,
         lastCheckAt: s.lastCheckAt,
+        sweepLog: s.sweepLog,
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,

@@ -123,7 +123,7 @@ export default function KitchenScreen() {
       {items.length === 0 ? (
         <Empty
           title="Your kitchen is empty"
-          body="Scan a grocery receipt and everything on it lands here with a predicted use-by date."
+          body="Scan a grocery receipt, or sweep your phone across the fridge and pantry to fill it in one go."
         />
       ) : (
         <>
@@ -175,7 +175,10 @@ export default function KitchenScreen() {
         <Button title="Scan receipt" onPress={() => router.navigate('/scan')} style={{ flex: 1 }} />
         <Button kind="secondary" title="Scan barcode" onPress={() => router.push('/barcode')} style={{ flex: 1 }} />
       </View>
-      <Button kind="secondary" title="Type an item" onPress={() => router.push('/add')} style={{ marginTop: space(2) }} />
+      <View style={[styles.actions, { marginTop: space(2) }]}>
+        <Button kind="secondary" title="Sweep shelves" onPress={() => router.push('/shelf-scan')} style={{ flex: 1 }} />
+        <Button kind="secondary" title="Type an item" onPress={() => router.push('/add')} style={{ flex: 1 }} />
+      </View>
       {items.length > 0 && <Text style={styles.hint}>Tap an item to edit it or log part of it. Tap ✓ when it's gone.</Text>}
     </ScrollView>
   );
