@@ -39,6 +39,10 @@ export interface EventRow {
   outcome: string;
   price: number | null;
   at: string;
+  key?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  share?: number | null;
 }
 
 export const itemToRow = (it: InventoryItem, householdId: string): ItemRow => ({
@@ -104,6 +108,10 @@ export const eventToRow = (e: WasteEntry & { id: string }, householdId: string):
   outcome: e.outcome,
   price: e.price ?? null,
   at: e.at,
+  key: e.key ?? null,
+  quantity: e.quantity ?? null,
+  unit: e.unit ?? null,
+  share: e.share ?? null,
 });
 
 export const rowToEvent = (r: EventRow): WasteEntry => ({
@@ -112,6 +120,10 @@ export const rowToEvent = (r: EventRow): WasteEntry => ({
   outcome: r.outcome === 'tossed' ? 'tossed' : 'used',
   price: r.price === null ? undefined : Number(r.price),
   at: r.at,
+  ...(r.key ? { key: r.key } : {}),
+  ...(r.quantity != null ? { quantity: Number(r.quantity) } : {}),
+  ...(r.unit ? { unit: r.unit } : {}),
+  ...(r.share != null ? { share: Number(r.share) } : {}),
 });
 
 export interface RecipeRow {

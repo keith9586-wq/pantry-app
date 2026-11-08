@@ -9,6 +9,7 @@ import { useStore } from '../../store/useStore';
 import { estimateList } from '../../lib/prices';
 import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
+import { adviceTag, buySizeAdvice } from '../../lib/buysize';
 import { forecastRunOuts, runOutLabel } from '../../lib/runout';
 
 const SOURCE_LABEL = { auto: 'running low', recipe: 'for a recipe', manual: '' } as const;
@@ -24,6 +25,8 @@ export default function ShoppingScreen() {
   const autoList = can(usePlan(), 'autoList');
   const priceHistory = useStore((s) => s.priceHistory);
   const estimate = estimateList(priceHistory, shopping);
+  const log = useStore((s) => s.log);
+  const sizeTips = new Map(autoList ? buySizeAdvice(log).map((a) => [a.key, a]) : []);
   const items = useStore((s) => s.items);
   const purchaseCounts = useStore((s) => s.purchaseCounts);
   const runOuts = useMemo(
@@ -90,7 +93,9 @@ export default function ShoppingScreen() {
               >
                 <Text style={styles.check}>{s.checked ? '☑' : '☐'}</Text>
                 <Text style={[styles.name, s.checked && { textDecorationLine: 'line-through' }]}>{s.name}</Text>
-                {s.source === 'auto' && rhythm.has(s.key) ? (
+                {sizeTips.has(s.key) && !s.checked ? (
+                  <Text style={[styles.tag, { color: colors.primary }]}>{adviceTag(sizeTips.get(s.key)!)}</Text>
+                ) : s.source === 'auto' && rhythm.has(s.key) ? (
                   <Text style={styles.tag}>{runOutLabel(rhythm.get(s.key)!)}</Text>
                 ) : SOURCE_LABEL[s.source] ? (
                   <Text style={styles.tag}>{SOURCE_LABEL[s.source]}</Text>
