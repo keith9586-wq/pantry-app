@@ -8,12 +8,15 @@ import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
 import { priceChanges, priceInsight } from '../../lib/prices';
 import { PriceTag } from '../../components/PriceTag';
+import { adviceText, buySizeAdvice } from '../../lib/buysize';
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
 export default function SavingsScreen() {
   const log = useStore((s) => s.log);
   const stats = moneyStats(log);
+  const sizes = buySizeAdvice(log).slice(0, 4);
+  const sizeSavings = sizes.reduce((s, a) => s + a.wastedPerMonth, 0);
   const month = new Date().toLocaleString(undefined, { month: 'long' });
   const purchases = useStore((s) => s.purchases);
   const profile = useActiveProfile();
@@ -125,6 +128,20 @@ export default function SavingsScreen() {
           <Text style={styles.tip}>
             Tip: buy {stats.mostTossed[0].name.toLowerCase()} in smaller amounts, or freeze it the day you buy it.
           </Text>
+        </>
+      )}
+
+      {sizes.length > 0 && (
+        <>
+          <SectionTitle>Buy the right size</SectionTitle>
+          {sizes.map((a) => (
+            <View key={a.key} style={styles.row}>
+              <Text style={[styles.name, { flex: 1 }]}>{adviceText(a)}</Text>
+            </View>
+          ))}
+          {sizeSavings >= 1 && (
+            <Text style={styles.tip}>Buying these in the size you actually finish could save about {money(sizeSavings)} a month.</Text>
+          )}
         </>
       )}
 

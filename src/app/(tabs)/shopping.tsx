@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Empty, Input, SectionTitle } from '../../components/ui';
 import { colors, space } from '../../components/theme';
@@ -9,6 +9,8 @@ import { useStore } from '../../store/useStore';
 import { estimateList } from '../../lib/prices';
 import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
+import { adviceTag, buySizeAdvice } from '../../lib/buysize';
+import { forecastRunOuts, runOutLabel } from '../../lib/runout';
 
 const SOURCE_LABEL = { auto: 'running low', recipe: 'for a recipe', manual: '' } as const;
 
@@ -23,6 +25,17 @@ export default function ShoppingScreen() {
   const autoList = can(usePlan(), 'autoList');
   const priceHistory = useStore((s) => s.priceHistory);
   const estimate = estimateList(priceHistory, shopping);
+  const log = useStore((s) => s.log);
+  const sizeTips = new Map(autoList ? buySizeAdvice(log).map((a) => [a.key, a]) : []);
+  const items = useStore((s) => s.items);
+  const purchaseCounts = useStore((s) => s.purchaseCounts);
+  const runOuts = useMemo(
+    () => (autoList ? forecastRunOuts(purchaseCounts, priceHistory, items) : []),
+    [autoList, purchaseCounts, priceHistory, items],
+  );
+  const rhythm = new Map(runOuts.map((r) => [r.key, r]));
+  const onList = new Set(shopping.map((s) => s.key));
+  const comingUp = runOuts.filter((r) => r.dueIn > 1 && r.dueIn <= 4 && !onList.has(r.key));
 
   // Staples you buy often are added automatically whenever the list is opened.
   useFocusEffect(
@@ -80,11 +93,30 @@ export default function ShoppingScreen() {
               >
                 <Text style={styles.check}>{s.checked ? '☑' : '☐'}</Text>
                 <Text style={[styles.name, s.checked && { textDecorationLine: 'line-through' }]}>{s.name}</Text>
-                {SOURCE_LABEL[s.source] ? <Text style={styles.tag}>{SOURCE_LABEL[s.source]}</Text> : null}
+                {sizeTips.has(s.key) && !s.checked ? (
+                  <Text style={[styles.tag, { color: colors.primary }]}>{adviceTag(sizeTips.get(s.key)!)}</Text>
+                ) : s.source === 'auto' && rhythm.has(s.key) ? (
+                  <Text style={styles.tag}>{runOutLabel(rhythm.get(s.key)!)}</Text>
+                ) : SOURCE_LABEL[s.source] ? (
+                  <Text style={styles.tag}>{SOURCE_LABEL[s.source]}</Text>
+                ) : null}
               </Pressable>
             ))}
           </View>
         ))
+      )}
+
+      {comingUp.length > 0 && (
+        <>
+          <SectionTitle>Running out in the next few days</SectionTitle>
+          {comingUp.map((r) => (
+            <Pressable key={r.key} onPress={() => addShopping(r.name, 'auto')} style={styles.row}>
+              <Text style={styles.check}>＋</Text>
+              <Text style={styles.name}>{r.name}</Text>
+              <Text style={styles.tag}>in about {r.dueIn} days</Text>
+            </Pressable>
+          ))}
+        </>
       )}
 
       {estimate.priced > 0 && (

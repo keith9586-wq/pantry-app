@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, Empty, SectionTitle } from '../../components/ui';
 import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
@@ -10,6 +10,7 @@ import { findItem } from '../../lib/recipes';
 import { recipeFit } from '../../lib/diet';
 import { useActiveProfile, useRecipes, useStore } from '../../store/useStore';
 import { isCustom } from '../../lib/customRecipe';
+import { LEFTOVER_DAYS } from '../../lib/leftovers';
 
 export default function RecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,6 +23,7 @@ export default function RecipeScreen() {
   const canPlan = can(usePlan(), 'mealPlanner');
   const profile = useActiveProfile();
   const [picking, setPicking] = useState(false);
+  const [leftovers, setLeftovers] = useState(0);
 
   const rows = useMemo(
     () => (recipe ? recipe.ingredients.map((ing) => ({ ing, item: findItem(items, ing) })) : []),
@@ -105,13 +107,24 @@ export default function RecipeScreen() {
             }}
           />
         )}
+        <View style={styles.leftovers}>
+          <Text style={styles.leftoversLabel}>Portions left over</Text>
+          <Pressable onPress={() => setLeftovers((n) => Math.max(0, n - 1))} hitSlop={8} accessibilityLabel="Fewer leftovers">
+            <Text style={styles.leftoversStep}>−</Text>
+          </Pressable>
+          <Text style={styles.leftoversNum}>{leftovers}</Text>
+          <Pressable onPress={() => setLeftovers((n) => Math.min(20, n + 1))} hitSlop={8} accessibilityLabel="More leftovers">
+            <Text style={styles.leftoversStep}>+</Text>
+          </Pressable>
+        </View>
         <Button
           title="I made this"
           onPress={() => {
-            const usedUp = cook(recipe);
+            const usedUp = cook(recipe, leftovers);
+            const extra = leftovers > 0 ? ` ${leftovers} ${leftovers === 1 ? 'portion' : 'portions'} saved as leftovers, eat within ${LEFTOVER_DAYS} days.` : '';
             Alert.alert(
               'Kitchen updated',
-              usedUp.length ? `Used up: ${usedUp.join(', ')}. Everything else was reduced.` : 'Ingredients were deducted from your kitchen.',
+              (usedUp.length ? `Used up: ${usedUp.join(', ')}. Everything else was reduced.` : 'Ingredients were deducted from your kitchen.') + extra,
             );
             router.back();
           }}
@@ -150,6 +163,10 @@ export default function RecipeScreen() {
 }
 
 const styles = StyleSheet.create({
+  leftovers: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(1) },
+  leftoversLabel: { flex: 1, fontSize: 15, color: colors.text },
+  leftoversStep: { fontSize: 24, color: colors.primary, paddingHorizontal: space(2) },
+  leftoversNum: { fontSize: 17, fontWeight: '600', color: colors.text, minWidth: 24, textAlign: 'center' },
   meta: { fontSize: 15, color: colors.muted },
   ingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: space(1.5) },
   dot: { fontSize: 14, width: 22 },
