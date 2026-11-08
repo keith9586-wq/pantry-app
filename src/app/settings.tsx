@@ -10,6 +10,7 @@ import { enableReminders } from '../notify/reminders';
 import { useStore } from '../store/useStore';
 import { confirmSaveEmail, confirmSignIn, getAccount, startSaveEmail, startSignIn } from '../sync/account';
 import { supabase } from '../sync/client';
+import { zip3 } from '../lib/priceMap';
 
 type Flow = { mode: 'save' | 'signin'; email: string; codeSent: boolean } | null;
 
@@ -27,6 +28,8 @@ export default function SettingsScreen() {
   const householdId = useStore((s) => s.householdId);
   const setHousehold = useStore((s) => s.setHousehold);
   const remindersOn = useStore((s) => s.remindersOn);
+  const priceSharing = useStore((s) => s.priceSharing);
+  const setPriceSharing = useStore((s) => s.setPriceSharing);
   const dietProfile = useStore((s) => s.dietProfile);
   const setRemindersOn = useStore((s) => s.setRemindersOn);
   const [account, setAccount] = useState<{ email: string | null; anonymous: boolean } | null>(null);
@@ -88,6 +91,36 @@ export default function SettingsScreen() {
         onPress={() => router.push('/diet')}
       />
 
+      {supabase && (
+        <>
+        <SectionTitle>Prices near you</SectionTitle>
+        <View style={styles.row}>
+          <Text style={[styles.rowLabel, { flex: 1 }]}>Share what I pay, anonymously</Text>
+          <Switch
+            value={priceSharing.on}
+            onValueChange={(on) => setPriceSharing({ ...priceSharing, on })}
+            trackColor={{ true: colors.primary }}
+          />
+        </View>
+        {priceSharing.on && (
+          <Card>
+            <Input
+              value={priceSharing.zip}
+              onChangeText={(zip) => setPriceSharing({ ...priceSharing, zip })}
+              placeholder="Your ZIP code"
+              keyboardType="number-pad"
+              maxLength={5}
+            />
+            <Text style={[styles.body, { marginTop: space(2) }]}>
+              {zip3(priceSharing.zip)
+                ? `Only the first 3 digits (${zip3(priceSharing.zip)}xx) and the store name are shared with each price. No name, household or exact time.`
+                : 'Enter a 5-digit ZIP. Only its first 3 digits are ever shared.'}{' '}
+              Prices from others show in Savings once 3 or more people nearby have shared them.
+            </Text>
+          </Card>
+        )}
+        </>
+      )}
       <SectionTitle>Trips</SectionTitle>
       <Row label="Going away" value="Plan" onPress={() => router.push('/away')} />
 

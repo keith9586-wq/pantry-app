@@ -4,6 +4,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 
 ## What works today
 
+- **Prices near you (opt-in, Plus to view).** People who turn on anonymous sharing in Settings send per-unit prices with the store chain and ZIP3 when they confirm a receipt. Savings shows "Eggs: $0.25 at Aldi near you, vs $0.40 you paid" from area medians. A price only appears once 3 different people have reported it (migration `0008_area_prices.sql`: raw reports can't be read, only the aggregated view).
 - **Cart health (Plus).** Savings shows what share of the month's shopping went to fruit and vegetables, sweets and sugary drinks, and highly processed food (by spend when receipts have prices), the change from last month, and anything that didn't fit the diet settings. No food diary needed.
 - **Away mode.** Settings → Going away: pick when you leave and for how long. The app lists what would spoil (freeze it in one tap, or eat it first, with dinners added to the plan on Plus), keeps fresh food off the self-filling list from the day before you leave, and pauses use-by reminders until you're back.
 - **Budget week (Plus).** "Feed 4 people for $60": plans 3, 5 or 7 dinners that use what's on hand first (especially food about to expire), then the cheapest extras, priced from your own receipts or typical store prices. One tap fills the meal plan and the shopping list.

@@ -74,6 +74,9 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** Opt-in anonymous price sharing for the local price map. */
+  priceSharing: { on: boolean; zip: string };
+  setPriceSharing: (p: { on: boolean; zip: string }) => void;
   /** Everything bought, newest first, for the monthly cart health view. */
   purchases: Purchase[];
   /** A trip away: fresh food isn't restocked and reminders pause. */
@@ -191,6 +194,8 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      priceSharing: { on: false, zip: '' },
+      setPriceSharing: (priceSharing) => set({ priceSharing }),
       purchases: [],
       away: null,
       setAway: (away) => set({ away }),
@@ -405,6 +410,7 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        priceSharing: s.priceSharing,
         purchases: s.purchases,
         away: s.away,
         recalls: s.recalls,
