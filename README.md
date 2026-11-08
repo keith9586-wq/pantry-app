@@ -5,7 +5,10 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 ## What works today
 
 - **Run-out prediction (Plus).** The app learns how often you buy each staple ("eggs every 9 days") and puts it on the list the day before it usually runs out. A "Running out in the next few days" section previews what's next, and with reminders on there's a nudge at 6 pm the evening before your usual shop day.
+- **10-second pantry check.** Each item has a confidence score that falls with age, low fill and a passed date. Once a day the Kitchen tab offers a short stack of cards for only the least-sure items ("Still have spinach?"): swipe right if it's there, left if it's gone, or tap how much is left.
+- **Leftovers.** "I made this" can save portions of the dish as their own item ("Chili (Tuesday)", eat within 4 days). Leftovers sit at the top of the Kitchen tab and can also be added by hand.
 - **Receipt scanning.** Take a photo of a receipt (or paste e-receipt text). Store shorthand like `GV WHL MLK 1G` becomes "Whole Milk", and each item lands in your kitchen.
+- **Shelf sweep.** For a first stock-take, pan the phone slowly across the fridge, freezer or pantry. The app grabs a frame every 1.2 seconds, sends the best-spread 8 to Claude in one request, and shows a list to check (with counts you can fix) before anything is added. Items added this way don't count as purchases, so they don't skew the shopping list or prices.
 - **Predicted use-by dates.** Every item gets an estimated date from what it is and where it's kept. Moving milk to the freezer re-estimates it.
 - **Barcode scanning.** Scan a package to add it, looked up in [Open Food Facts](https://world.openfoodfacts.org).
 - **Accurate by design.** Tap any item to fix its name, date or storage spot, log part of it ("used 2 of 12 eggs"), or mark how much is left. Every change shows an Undo bar for 6 seconds.
@@ -24,7 +27,7 @@ A phone app (iOS and Android) that keeps track of what's in your fridge, freezer
 - **Price tracking.** Every scanned receipt records what you paid per unit. When you check a new receipt, each line says whether it's more or less than usual. The Savings tab lists price jumps and what you usually pay, and the shopping list shows a rough total from your last prices.
 - **Your own recipes.** "Add your own recipe" on the Recipes tab takes a name, time, servings, and ingredients and steps typed or pasted one per line ("1 1/2 cups flour", "1 onion, chopped", "salt to taste"). You can also paste a link from almost any recipe site (anything that publishes schema.org Recipe data, which Google requires for recipe cards) and the form fills itself in. They're ranked with the built-in ones, work in the meal planner and "I made this", and can be edited or deleted.
 - **Diet and allergies.** In Settings, pick diets (vegetarian, vegan, pescatarian, gluten-free, dairy-free), allergies and foods you don't eat. Recipes that don't fit are hidden, optional ingredients that don't fit are marked "leave out", and a recipe page warns you if it conflicts. Scanning a barcode checks the product's label (Open Food Facts allergens, "may contain" traces and vegan/vegetarian analysis) against your allergies and diet. Free for everyone.
-- **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Plus ($4.99/month) unlocks unlimited scans, recipes, the weekly meal planner, the self-filling list and the Savings tab with price tracking. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
+- **Plans.** Free includes 5 receipt photo scans a month, barcode scanning, manual entry and use-by tracking. Shelf sweeps have their own allowance on every plan (Free 2, Plus 20, Family 30 a month) because each one costs about $0.07 in AI calls. Plus ($4.99/month) unlocks unlimited scans, recipes, the weekly meal planner, the self-filling list and the Savings tab with price tracking. Family ($7.99/month) adds a shared household of up to 6 people and email forwarding; joining someone's household is free. Purchases go through RevenueCat. Until its keys are set, every feature is unlocked.
 
 Without a backend configured, the app runs fully on the phone and the sharing screen explains what to set up.
 
@@ -46,6 +49,7 @@ Photo receipt scanning needs the server function below. Without it, the Scan tab
 | Path | What it does |
 | --- | --- |
 | `functions/parse-receipt` | Takes a receipt photo or text, asks Claude to read it, returns clean line items as JSON. |
+| `functions/scan-shelves` | Takes up to 8 frames from a shelf sweep, asks Claude to list what is stored there (each item once), returns items with storage and fill level. |
 | `functions/inbound-email` | Webhook for forwarded e-receipt emails. Each household gets an address like `r-<code>@receipts.<your-domain>`; parsed items wait in `pending_receipts` for someone to confirm. |
 | `migrations/0001_households.sql` | Households, members, invite codes, shared items and shopping list, history for the money view, row-level security so people only see their own household. |
 | `functions/revenuecat-webhook` | Marks a household as Family while its owner's subscription is active, so every member gets Family features. |
@@ -60,6 +64,7 @@ supabase link --project-ref <your-project>
 supabase db push
 supabase secrets set ANTHROPIC_API_KEY=<key> INBOUND_EMAIL_SECRET=<random string>
 supabase functions deploy parse-receipt
+supabase functions deploy scan-shelves
 supabase functions deploy inbound-email
 cp .env.example .env   # then fill in EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY
 ```

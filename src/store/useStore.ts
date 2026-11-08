@@ -20,6 +20,7 @@ import type {
 
 import { uuid } from '../lib/id';
 import { addPurchaseDate, forecastRunOuts, dueWithin, type PurchaseCounts } from '../lib/runout';
+import { makeLeftover } from '../lib/leftovers';
 import { prunePlan, type MealPlan } from '../lib/planner';
 import { recordPrices, type PriceHistory } from '../lib/prices';
 import { combineProfiles, EMPTY_PROFILE, isEmptyProfile, type DietProfile } from '../lib/diet';
@@ -36,6 +37,7 @@ export interface NewItemInput {
   storage?: StorageSpot;
   price?: number;
   expiresAt?: string | null;
+  fill?: FillLevel;
 }
 
 interface Snapshot {
@@ -67,6 +69,9 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** Dates of shelf sweeps, for the monthly sweep allowance. */
+  sweepLog: string[];
+  recordSweep: () => void;
   /** Set once the user creates or joins a household; turns on cloud sync. */
   householdId: string | null;
   setHousehold: (id: string | null) => void;
@@ -84,14 +89,22 @@ interface State extends Snapshot {
   undo: () => void;
   clearUndo: () => void;
 
-  addItems: (inputs: NewItemInput[], purchasedAt?: Date) => void;
+  /** stockTake: items already at home (shelf sweep), so they don't count as purchases. */
+  addItems: (inputs: NewItemInput[], purchasedAt?: Date, opts?: { stockTake?: boolean }) => void;
   addParsed: (lines: ParsedLine[], purchasedAt?: Date) => void;
   updateItem: (id: string, patch: Partial<InventoryItem>) => void;
   cycleFill: (id: string) => void;
+  /** Pantry check: it's still there, with this much left. */
+  confirmItem: (id: string, fill: FillLevel) => void;
+  /** When the daily pantry check was last finished. */
+  lastCheckAt: string | null;
+  finishCheck: () => void;
+  addLeftover: (title: string, portions: number) => void;
   /** Logs part of an item as used, e.g. 2 of 12 eggs. */
   useSome: (id: string, amount: number) => void;
   finishItem: (id: string, outcome: 'used' | 'tossed') => void;
-  cook: (recipe: Recipe) => string[];
+  /** Deducts ingredients; leftovers > 0 also adds the dish as portions to eat by 4 days. */
+  cook: (recipe: Recipe, leftovers?: number) => string[];
 
   addShopping: (name: string, source?: ShoppingItem['source']) => void;
   toggleShopping: (id: string) => void;
@@ -117,7 +130,7 @@ function buildItem(input: NewItemInput, purchasedAt: Date): InventoryItem {
     storage,
     quantity: input.quantity ?? 1,
     unit: input.unit ?? 'each',
-    fill: 'full',
+    fill: input.fill ?? 'full',
     addedAt: purchasedAt.toISOString(),
     expiresAt: userDate ? input.expiresAt! : predictExpiry(key, category, storage, purchasedAt).toISOString(),
     expirySource: userDate ? 'user' : 'predicted',
@@ -158,6 +171,7 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      sweepLog: [],
       remindersOn: false,
       mealPlan: {},
       addToPlan: (day, recipeId) =>
@@ -170,6 +184,7 @@ export const useStore = create<State>()(
         set((s) => ({ mealPlan: prunePlan({ ...s.mealPlan, [day]: (s.mealPlan[day] ?? []).filter((id) => id !== recipeId) }, new Date()) })),
       setRemindersOn: (on) => set({ remindersOn: on }),
       recordScan: () => set((s) => ({ scanLog: [new Date().toISOString(), ...s.scanLog].slice(0, 100) })),
+      recordSweep: () => set((s) => ({ sweepLog: [new Date().toISOString(), ...s.sweepLog].slice(0, 100) })),
 
       setHousehold: (id) => set(id ? { householdId: id } : { householdId: null, householdDiets: [] }),
       applyRemote: (data) => set({ ...data, lastAction: null }),
@@ -180,13 +195,13 @@ export const useStore = create<State>()(
       },
       clearUndo: () => set({ lastAction: null }),
 
-      addItems: (inputs, purchasedAt = new Date()) => {
+      addItems: (inputs, purchasedAt = new Date(), opts) => {
         const built = inputs.filter((i) => i.name.trim()).map((i) => buildItem(i, purchasedAt));
         if (built.length === 0) return;
         remember(built.length === 1 ? `Added ${built[0].name}` : `Added ${built.length} items`);
         set((s) => {
           const counts = { ...s.purchaseCounts };
-          for (const it of built) {
+          for (const it of opts?.stockTake ? [] : built) {
             const prev = counts[it.key];
             counts[it.key] = {
               name: prev?.name ?? it.name,
@@ -200,7 +215,7 @@ export const useStore = create<State>()(
           return {
             items: [...s.items, ...built],
             purchaseCounts: counts,
-            priceHistory: recordPrices(s.priceHistory, built, purchasedAt),
+            priceHistory: opts?.stockTake ? s.priceHistory : recordPrices(s.priceHistory, built, purchasedAt),
             shopping: s.shopping.filter((sh) => !bought.has(sh.key)),
           };
         });
@@ -264,14 +279,27 @@ export const useStore = create<State>()(
           };
         }),
 
-      cook: (recipe) => {
+      confirmItem: (id, fill) => {
+        const at = new Date().toISOString();
+        set((s) => ({ items: s.items.map((it) => (it.id === id ? { ...it, fill, checkedAt: at } : it)) }));
+      },
+      lastCheckAt: null,
+      finishCheck: () => set({ lastCheckAt: new Date().toISOString() }),
+      addLeftover: (title, portions) => {
+        if (!title.trim()) return;
+        remember(`Added leftover ${title.trim()}`);
+        set((s) => ({ items: [...s.items, makeLeftover(title, portions, new Date(), newId())] }));
+      },
+
+      cook: (recipe, leftovers = 0) => {
         const before = get().items;
         const { inventory, usedUp } = cookRecipe(before, recipe);
         remember(`Cooked ${recipe.title}`);
         const at = new Date().toISOString();
         const priceOf = (name: string) => before.find((i) => i.name === name)?.price;
+        const dish = leftovers > 0 ? [makeLeftover(recipe.title, leftovers, new Date(), newId())] : [];
         set((s) => ({
-          items: inventory,
+          items: [...inventory, ...dish],
           log: [...usedUp.map((name) => ({ id: newId(), name, at, outcome: 'used' as const, price: priceOf(name) })), ...s.log].slice(0, 500),
         }));
         return usedUp;
@@ -331,6 +359,8 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        lastCheckAt: s.lastCheckAt,
+        sweepLog: s.sweepLog,
         remindersOn: s.remindersOn,
         mealPlan: s.mealPlan,
         priceHistory: s.priceHistory,

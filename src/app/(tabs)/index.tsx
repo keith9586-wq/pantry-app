@@ -7,6 +7,8 @@ import { daysLeft, expiryLabel, urgency } from '../../lib/expiry';
 import type { InventoryItem, StorageSpot } from '../../lib/types';
 import { moneyStats, useStore } from '../../store/useStore';
 import { enableReminders } from '../../notify/reminders';
+import { checkedToday, pickChecks } from '../../lib/confidence';
+import { leftoversFirst } from '../../lib/leftovers';
 
 const SPOTS: { key: StorageSpot | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -21,7 +23,13 @@ function ItemRow({ item }: { item: InventoryItem }) {
   const finishItem = useStore((s) => s.finishItem);
   const u = urgency(item.expiresAt);
   const c = urgencyColor[u];
-  const qty = item.unit === 'each' ? (item.quantity === 1 ? '' : `${item.quantity} · `) : `${item.quantity} ${item.unit} · `;
+  const qty = item.leftover
+    ? `${item.quantity} ${item.quantity === 1 ? 'portion' : 'portions'}`
+    : item.unit === 'each'
+      ? item.quantity === 1
+        ? ''
+        : `${item.quantity} · `
+      : `${item.quantity} ${item.unit} · `;
 
   return (
     <View style={styles.row}>
@@ -33,8 +41,8 @@ function ItemRow({ item }: { item: InventoryItem }) {
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.meta}>
           {qty}
-          {FILL_LABEL[item.fill]}
-          {item.expirySource === 'predicted' ? ' · estimated date' : ''}
+          {item.leftover ? '' : FILL_LABEL[item.fill]}
+          {!item.leftover && item.expirySource === 'predicted' ? ' · estimated date' : ''}
         </Text>
       </Pressable>
       <View style={[styles.badge, { backgroundColor: c.bg }]}>
@@ -62,8 +70,13 @@ export default function KitchenScreen() {
   const log = useStore((s) => s.log);
   const [spot, setSpot] = useState<StorageSpot | 'all'>('all');
 
+  const lastCheckAt = useStore((s) => s.lastCheckAt);
+  const toCheck = useMemo(() => (checkedToday(lastCheckAt) ? [] : pickChecks(items)), [items, lastCheckAt]);
+  const leftovers = useMemo(() => leftoversFirst(items), [items]);
+
   const { useSoon, rest } = useMemo(() => {
     const filtered = items
+      .filter((i) => !i.leftover)
       .filter((i) => spot === 'all' || i.storage === spot)
       .sort((a, b) => (a.expiresAt ?? '9999').localeCompare(b.expiresAt ?? '9999'));
     return {
@@ -110,7 +123,7 @@ export default function KitchenScreen() {
       {items.length === 0 ? (
         <Empty
           title="Your kitchen is empty"
-          body="Scan a grocery receipt and everything on it lands here with a predicted use-by date."
+          body="Scan a grocery receipt, or sweep your phone across the fridge and pantry to fill it in one go."
         />
       ) : (
         <>
@@ -122,6 +135,20 @@ export default function KitchenScreen() {
                 <Button kind="secondary" title="Not now" onPress={() => setHideReminderCard(true)} />
               </View>
             </View>
+          )}
+          {toCheck.length > 0 && (
+            <Pressable style={styles.tip} onPress={() => router.push('/check')} accessibilityRole="button">
+              <Text style={[styles.tipText, { fontWeight: '700' }]}>Quick check · {toCheck.length} {toCheck.length === 1 ? 'item' : 'items'}</Text>
+              <Text style={styles.tipText}>About 10 seconds. Tell us what's still here so your list stays right.</Text>
+            </Pressable>
+          )}
+          {leftovers.length > 0 && (
+            <>
+              <SectionTitle>Leftovers to eat first</SectionTitle>
+              {leftovers.map((i) => (
+                <ItemRow key={i.id} item={i} />
+              ))}
+            </>
           )}
           {useSoon.length > 0 && (
             <>
@@ -148,7 +175,10 @@ export default function KitchenScreen() {
         <Button title="Scan receipt" onPress={() => router.navigate('/scan')} style={{ flex: 1 }} />
         <Button kind="secondary" title="Scan barcode" onPress={() => router.push('/barcode')} style={{ flex: 1 }} />
       </View>
-      <Button kind="secondary" title="Type an item" onPress={() => router.push('/add')} style={{ marginTop: space(2) }} />
+      <View style={[styles.actions, { marginTop: space(2) }]}>
+        <Button kind="secondary" title="Sweep shelves" onPress={() => router.push('/shelf-scan')} style={{ flex: 1 }} />
+        <Button kind="secondary" title="Type an item" onPress={() => router.push('/add')} style={{ flex: 1 }} />
+      </View>
       {items.length > 0 && <Text style={styles.hint}>Tap an item to edit it or log part of it. Tap ✓ when it's gone.</Text>}
     </ScrollView>
   );

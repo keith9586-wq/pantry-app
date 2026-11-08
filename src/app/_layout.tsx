@@ -24,6 +24,8 @@ export default function RootLayout() {
         <Stack.Screen name="recipe/[id]" options={{ title: 'Recipe' }} />
         <Stack.Screen name="recipe-edit" options={{ presentation: 'modal', title: 'New recipe' }} />
         <Stack.Screen name="item/[id]" options={{ title: 'Item' }} />
+        <Stack.Screen name="check" options={{ presentation: 'modal', title: 'Quick check' }} />
+        <Stack.Screen name="shelf-scan" options={{ presentation: 'modal', title: 'Sweep your shelves' }} />
         <Stack.Screen name="barcode" options={{ presentation: 'modal', title: 'Scan a barcode' }} />
         <Stack.Screen name="household" options={{ title: 'Household' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
