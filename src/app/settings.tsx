@@ -121,6 +121,8 @@ export default function SettingsScreen() {
         )}
         </>
       )}
+      <SectionTitle>Trips</SectionTitle>
+      <Row label="Going away" value="Plan" onPress={() => router.push('/away')} />
 
       <SectionTitle>Reminders</SectionTitle>
       <View style={styles.row}>

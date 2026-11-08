@@ -6,19 +6,27 @@ import { supabase } from '../../sync/client';
 import { fetchAreaPrices } from '../../sync/priceMap';
 import { Card, Empty, SectionTitle } from '../../components/ui';
 import { colors, space } from '../../components/theme';
-import { moneyStats, useStore } from '../../store/useStore';
+import { moneyStats, useActiveProfile, useStore } from '../../store/useStore';
+import { cartHealth, previousMonth, trend } from '../../lib/cartHealth';
 import { Locked } from '../../components/Locked';
 import { usePlan } from '../../billing/billing';
 import { can } from '../../lib/plans';
 import { priceChanges, priceInsight } from '../../lib/prices';
 import { PriceTag } from '../../components/PriceTag';
+import { adviceText, buySizeAdvice } from '../../lib/buysize';
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
 export default function SavingsScreen() {
   const log = useStore((s) => s.log);
   const stats = moneyStats(log);
+  const sizes = buySizeAdvice(log).slice(0, 4);
+  const sizeSavings = sizes.reduce((s, a) => s + a.wastedPerMonth, 0);
   const month = new Date().toLocaleString(undefined, { month: 'long' });
+  const purchases = useStore((s) => s.purchases);
+  const profile = useActiveProfile();
+  const health = cartHealth(purchases, profile);
+  const lastHealth = cartHealth(purchases, profile, previousMonth());
   const plan = usePlan();
   const priceHistory = useStore((s) => s.priceHistory);
   const sharing = useStore((s) => s.priceSharing);
@@ -89,6 +97,41 @@ export default function SavingsScreen() {
         </Card>
       )}
 
+      {health && (
+        <>
+          <SectionTitle>Cart health in {month}</SectionTitle>
+          <Card>
+            {[
+              { label: 'Fruit and vegetables', value: health.produce, before: lastHealth?.produce, good: 'up' },
+              { label: 'Sweets and sugary drinks', value: health.sugary, before: lastHealth?.sugary, good: 'down' },
+              { label: 'Highly processed food', value: health.processed, before: lastHealth?.processed, good: 'down' },
+            ].map((m) => (
+              <View key={m.label} style={{ marginBottom: space(3) }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={styles.name}>{m.label}</Text>
+                  <Text style={styles.name}>{Math.round(m.value * 100)}%</Text>
+                </View>
+                <View style={[styles.bar, { marginTop: space(1), height: 8 }]}>
+                  <View style={{ flex: m.value, backgroundColor: m.good === 'up' ? colors.primary : colors.danger }} />
+                  <View style={{ flex: 1 - m.value }} />
+                </View>
+                {trend(m.value, m.before) && <Text style={styles.meta}>{trend(m.value, m.before)}</Text>}
+              </View>
+            ))}
+            <Text style={styles.note}>
+              Share of {health.bySpend ? 'what you spent' : 'what you bought'} across {health.items} items, from your receipts. No food diary needed. A common goal is
+              about a third on fruit and vegetables.
+            </Text>
+            {health.offDiet.length > 0 && (
+              <Text style={styles.note}>
+                Didn't fit your diet settings: {health.offDiet.slice(0, 4).map((o) => `${o.name} (${o.why})`).join(', ')}
+                {health.offDiet.length > 4 ? ` and ${health.offDiet.length - 4} more` : ''}.
+              </Text>
+            )}
+          </Card>
+        </>
+      )}
+
       {stats.mostTossed.length > 0 && (
         <>
           <SectionTitle>Most often thrown out</SectionTitle>
@@ -132,6 +175,20 @@ export default function SavingsScreen() {
                   ? 'Not enough shoppers near you have shared prices yet. Every receipt you scan helps.'
                   : "You're already paying about the best price near you for what you buy."}
             </Text>
+          )}
+        </>
+      )}
+
+      {sizes.length > 0 && (
+        <>
+          <SectionTitle>Buy the right size</SectionTitle>
+          {sizes.map((a) => (
+            <View key={a.key} style={styles.row}>
+              <Text style={[styles.name, { flex: 1 }]}>{adviceText(a)}</Text>
+            </View>
+          ))}
+          {sizeSavings >= 1 && (
+            <Text style={styles.tip}>Buying these in the size you actually finish could save about {money(sizeSavings)} a month.</Text>
           )}
         </>
       )}

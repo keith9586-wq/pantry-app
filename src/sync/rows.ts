@@ -17,6 +17,9 @@ export interface ItemRow {
   expires_at: string | null;
   expiry_source: string;
   price: number | null;
+  brand?: string | null;
+  checked_at?: string | null;
+  leftover?: boolean;
 }
 
 export interface ShoppingRow {
@@ -36,6 +39,10 @@ export interface EventRow {
   outcome: string;
   price: number | null;
   at: string;
+  key?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  share?: number | null;
 }
 
 export const itemToRow = (it: InventoryItem, householdId: string): ItemRow => ({
@@ -52,6 +59,9 @@ export const itemToRow = (it: InventoryItem, householdId: string): ItemRow => ({
   expires_at: it.expiresAt,
   expiry_source: it.expirySource,
   price: it.price ?? null,
+  brand: it.brand ?? null,
+  checked_at: it.checkedAt ?? null,
+  leftover: !!it.leftover,
 });
 
 export const rowToItem = (r: ItemRow): InventoryItem => ({
@@ -67,6 +77,9 @@ export const rowToItem = (r: ItemRow): InventoryItem => ({
   expiresAt: r.expires_at,
   expirySource: r.expiry_source === 'user' ? 'user' : 'predicted',
   price: r.price === null ? undefined : Number(r.price),
+  ...(r.brand ? { brand: r.brand } : {}),
+  ...(r.checked_at ? { checkedAt: r.checked_at } : {}),
+  ...(r.leftover ? { leftover: true } : {}),
 });
 
 export const shoppingToRow = (s: ShoppingItem, householdId: string): ShoppingRow => ({
@@ -95,6 +108,10 @@ export const eventToRow = (e: WasteEntry & { id: string }, householdId: string):
   outcome: e.outcome,
   price: e.price ?? null,
   at: e.at,
+  key: e.key ?? null,
+  quantity: e.quantity ?? null,
+  unit: e.unit ?? null,
+  share: e.share ?? null,
 });
 
 export const rowToEvent = (r: EventRow): WasteEntry => ({
@@ -103,6 +120,10 @@ export const rowToEvent = (r: EventRow): WasteEntry => ({
   outcome: r.outcome === 'tossed' ? 'tossed' : 'used',
   price: r.price === null ? undefined : Number(r.price),
   at: r.at,
+  ...(r.key ? { key: r.key } : {}),
+  ...(r.quantity != null ? { quantity: Number(r.quantity) } : {}),
+  ...(r.unit ? { unit: r.unit } : {}),
+  ...(r.share != null ? { share: Number(r.share) } : {}),
 });
 
 export interface RecipeRow {
