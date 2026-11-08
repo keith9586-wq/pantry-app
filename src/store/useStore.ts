@@ -19,6 +19,7 @@ import type {
 } from '../lib/types';
 
 import { uuid } from '../lib/id';
+import { PERISHABLE, restockPaused, type AwayTrip } from '../lib/away';
 import { matchRecalls, type Recall, type RecallMatch } from '../lib/recalls';
 import { addPurchaseDate, forecastRunOuts, dueWithin, type PurchaseCounts } from '../lib/runout';
 import { makeLeftover } from '../lib/leftovers';
@@ -71,6 +72,9 @@ interface State extends Snapshot {
   removeFromPlan: (day: string, recipeId: string) => void;
   setRemindersOn: (on: boolean) => void;
   recordScan: () => void;
+  /** A trip away: fresh food isn't restocked and reminders pause. */
+  away: AwayTrip | null;
+  setAway: (trip: AwayTrip | null) => void;
   /** Recent FDA and USDA food recalls, refreshed about twice a day. */
   recalls: Recall[];
   recallsFetchedAt: string | null;
@@ -183,6 +187,8 @@ export const useStore = create<State>()(
       lastAction: null,
       householdId: null,
       scanLog: [],
+      away: null,
+      setAway: (away) => set({ away }),
       recalls: [],
       recallsFetchedAt: null,
       setRecalls: (recalls) => set({ recalls: recalls.slice(0, 1500), recallsFetchedAt: new Date().toISOString() }),
@@ -349,12 +355,14 @@ export const useStore = create<State>()(
       },
 
       refreshSuggestions: () => {
-        const { items, purchaseCounts, shopping, priceHistory } = get();
+        const { items, purchaseCounts, shopping, priceHistory, away } = get();
         const low = autoSuggestions(items, purchaseCounts, shopping);
         // Staples that usually run out within a day go on the list before they're gone.
         const seen = new Set([...shopping.map((s) => s.key), ...low.map((l) => l.key)]);
         const due = dueWithin(forecastRunOuts(purchaseCounts, priceHistory, items), 1).filter((r) => !seen.has(r.key));
-        const sugg = [...low, ...due];
+        // No fresh food on the list right before or during a trip.
+        const paused = restockPaused(away);
+        const sugg = [...low, ...due].filter((g) => !paused || !PERISHABLE.includes(g.category));
         set({
           shopping: [
             ...shopping,
@@ -388,6 +396,7 @@ export const useStore = create<State>()(
         log: s.log,
         householdId: s.householdId,
         scanLog: s.scanLog,
+        away: s.away,
         recalls: s.recalls,
         recallsFetchedAt: s.recallsFetchedAt,
         recallsDismissed: s.recallsDismissed,

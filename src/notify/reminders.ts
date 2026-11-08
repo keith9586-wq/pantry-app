@@ -40,8 +40,11 @@ export async function enableReminders(): Promise<boolean> {
 
 async function reschedule() {
   await Notifications.cancelAllScheduledNotificationsAsync();
-  const { items, remindersOn, purchaseCounts, priceHistory, shopping } = useStore.getState();
+  const { items, remindersOn, away, purchaseCounts, priceHistory, shopping } = useStore.getState();
   if (!remindersOn) return;
+  // Nobody can cook while away; the trip plan handles that food before leaving.
+  const awayFrom = away ? new Date(away.from).getTime() : Infinity;
+  const awayUntil = away ? new Date(away.until).getTime() : -Infinity;
   // The evening before the usual shop day: staples that will run out by then.
   const shopDay = can(currentPlan(), 'autoList') ? usualShopDay(purchaseCounts, priceHistory) : null;
   if (shopDay !== null) {
@@ -49,7 +52,7 @@ async function reschedule() {
     const daysAhead = Math.ceil((at.getTime() - Date.now()) / 86_400_000) + 1;
     const onList = new Set(shopping.filter((s) => !s.checked).map((s) => s.key));
     const due = dueWithin(forecastRunOuts(purchaseCounts, priceHistory, items), daysAhead);
-    if (due.length > 0) {
+    if (due.length > 0 && !(at.getTime() >= awayFrom && at.getTime() < awayUntil)) {
       const names = due.slice(0, 3).map((d) => d.name).join(', ') + (due.length > 3 ? ` and ${due.length - 3} more` : '');
       const missing = due.filter((d) => !onList.has(d.key)).length;
       await Notifications.scheduleNotificationAsync({
@@ -63,6 +66,7 @@ async function reschedule() {
     }
   }
   for (const r of planReminders(items, new Date())) {
+    if (r.at.getTime() >= awayFrom && r.at.getTime() < awayUntil) continue;
     await Notifications.scheduleNotificationAsync({
       content: { title: r.title, body: r.body, data: { screen: '/recipes' } },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: r.at, channelId: CHANNEL },
@@ -86,7 +90,7 @@ export function useExpiryReminders() {
     };
     run();
     const unsub = useStore.subscribe((s, prev) => {
-      if (s.items !== prev.items || s.purchaseCounts !== prev.purchaseCounts) run();
+      if (s.items !== prev.items || s.away !== prev.away || s.purchaseCounts !== prev.purchaseCounts) run();
     });
     return () => {
       unsub();

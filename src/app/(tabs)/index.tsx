@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, Empty, SectionTitle } from '../../components/ui';
 import { colors, space, urgencyColor } from '../../components/theme';
@@ -7,6 +7,7 @@ import { daysLeft, expiryLabel, urgency } from '../../lib/expiry';
 import type { InventoryItem, StorageSpot } from '../../lib/types';
 import { moneyStats, useRecallMatches, useStore } from '../../store/useStore';
 import { enableReminders } from '../../notify/reminders';
+import { restockPaused, tripOver } from '../../lib/away';
 import { checkedToday, pickChecks } from '../../lib/confidence';
 import { leftoversFirst } from '../../lib/leftovers';
 
@@ -91,6 +92,11 @@ export default function KitchenScreen() {
     };
   }, [items, spot]);
 
+  const away = useStore((s) => s.away);
+  const setAway = useStore((s) => s.setAway);
+  useEffect(() => {
+    if (tripOver(away)) setAway(null);
+  }, [away, setAway]);
   const recallMatches = useRecallMatches();
   const stats = moneyStats(log);
   const remindersOn = useStore((s) => s.remindersOn);
@@ -115,6 +121,14 @@ export default function KitchenScreen() {
         </View>
       </View>
 
+      {away && restockPaused(away) && (
+        <Pressable style={styles.tip} onPress={() => router.push('/away')} accessibilityRole="button">
+          <Text style={[styles.tipText, { fontWeight: '700' }]}>
+            Away until {new Date(away.until).toLocaleDateString(undefined, { weekday: 'long' })}
+          </Text>
+          <Text style={styles.tipText}>Fresh food stays off your list and reminders are paused. Tap to see what to freeze.</Text>
+        </Pressable>
+      )}
       {recallMatches.length > 0 && (
         <Pressable style={styles.recall} onPress={() => router.push('/recalls')} accessibilityRole="button">
           <Text style={styles.recallTitle}>
